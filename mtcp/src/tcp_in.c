@@ -782,6 +782,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// tcp_stream *meta_sock; 
 	// int ret;
 	uint64_t peerKey;
+	uint64_t truncatedHMAC;
 
 	/* when active open */
 	if (tcph->ack) {
@@ -817,6 +818,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 			// Can we use ParseMPTCPOptions??
 			// peerKey = ParseMPTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+			// Here GetPeerKey check first if there is a MP_CAPABLE option and then for the key in it
 			peerKey = GetPeerKey(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 			
 			if(peerKey != 0){
@@ -845,6 +847,15 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 				cur_stream->mptcp_cb->mpcb_stream->state = TCP_ST_ESTABLISHED;
 			}
 		
+			// Need to check for the MP_JOIN option
+			if (cur_stream->isMPJOINStream)
+			{
+				truncatedHMAC = checkMP_JOIN_SYN_ACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+				printf("Truncated HMAC: %lu\n", truncatedHMAC);
+			}
+			
+			
+
 			int ret = HandleActiveOpen(mtcp, 
 					cur_stream, cur_ts, tcph, seq, ack_seq, window);
 			if (!ret) {

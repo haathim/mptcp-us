@@ -8,6 +8,7 @@
 #include "ip_in.h"
 #include <endian.h>
 #include <openssl/sha.h>
+#include <openssl/hmac.h>
 
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
@@ -439,7 +440,7 @@ uint32_t sha1hashToken(uint64_t number, unsigned char hash[SHA_DIGEST_LENGTH]) {
     SHA1_Final(hash, &sha_ctx);
 
 	// Extract the first 32 bits
-    uint32_t first32Bits = (uint32_t)(hash[0]) << 24| (uint32_t)(hash[1]) << 16 | (uint32_t)(hash[2]) << 8 | (uint32_t)(hash[3]);
+    uint32_t first32Bits = (uint32_t)(hash[0]) << 24 | (uint32_t)(hash[1]) << 16 | (uint32_t)(hash[2]) << 8 | (uint32_t)(hash[3]);
 
     return first32Bits;
 }
@@ -451,6 +452,8 @@ GetToken(uint64_t key)
 
 	unsigned char hash[SHA_DIGEST_LENGTH];
 	token = sha1hashToken(htobe64(key), hash);
+	printf("Key: %lu\n", key);
+	printf("GetToken() => Token: %u\n", token);
 	return token;
 }
 
@@ -578,5 +581,101 @@ GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
 	}
 	//  No DSS
 	//printf("No DSS option\n");
+	return 0;
+}
+
+void hmac_sha1(const unsigned char *key, int key_len, const unsigned char *message, int message_len, unsigned char *digest) {
+    
+	HMAC_CTX *ctx;
+
+    // Allocate and initialize the context
+    ctx = HMAC_CTX_new();
+
+    // Using HMAC with SHA-1
+    HMAC_Init_ex(ctx, key, key_len, EVP_sha1(), NULL);
+    HMAC_Update(ctx, message, message_len);
+    HMAC_Final(ctx, digest, NULL);
+
+    // Clean up the context
+    HMAC_CTX_free(ctx);
+}
+
+void mp_join_hmac_generator(uint64_t key1, uint64_t key2, uint32_t num1, uint32_t num2, unsigned char* hash){
+
+	unsigned char key[16];
+    unsigned char message[8];
+
+	memcpy(key, &key1, sizeof(key1));
+    memcpy(key + sizeof(key1), &key2, sizeof(key2));
+
+	memcpy(message, &num1, sizeof(num1));
+    memcpy(message + sizeof(num1), &num2, sizeof(num2));
+
+	// // Calculate HMAC SHA-1 hash
+    // unsigned char hash[20];
+
+	// print the contents of key and message in hex
+	printf("sizeof(key): %d\nKey: ", sizeof(key));
+	for (int i = 0; i < sizeof(key); i++) {
+		printf("%02x", key[i]);
+	}
+	printf("\n");
+
+	printf("sizeof(message): %d\nMessage: ", sizeof(message));
+	for (int i = 0; i < sizeof(message); i++) {
+		printf("%02x", message[i]);
+	}
+	printf("\n");
+
+    hmac_sha1(key, sizeof(key), message, sizeof(message), hash);
+
+	// // Print the hash
+    // printf("sizeof(hash): %d\nHMAC SHA-1 Hash: ", sizeof(hash));
+    // for (int i = 0; i < sizeof(hash); i++) {
+    //     printf("%02x", hash[i]);
+    // }
+    // printf("\n");
+
+}
+
+uint64_t checkMP_JOIN_SYN_ACK(tcp_stream *cur_stream, 
+		uint32_t cur_ts, uint8_t *tcpopt, int len){
+	int i;
+	unsigned int opt, optlen;
+	uint8_t subtypeAndVersion;
+	// uint32_t keyLow32,keyHigh32;
+
+	for (i = 0; i < len; ) {
+		// why i++ here? Because after using the value only it will increment, so initially it will be,
+		// opt = *(tcpopt + 0) = *tcpopt
+		opt = *(tcpopt + i++);
+		
+		if (opt == TCP_OPT_END) {	// end of option field
+			break;
+		} else if (opt == TCP_OPT_NOP) {	// no option
+			continue;
+		} else {
+
+			optlen = *(tcpopt + i++);
+			if (i + optlen - 2 > len) {
+				break;
+			}
+
+			if (opt == TCP_OPT_MPTCP) {
+				// Check MP_JOIN
+				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
+				if(subtypeAndVersion == 0x10){
+					cur_stream->peerRandomNumber = be32toh(*(uint32_t*)(tcpopt + i + 10));
+					printf("Peer Random Number: %u\n", cur_stream->peerRandomNumber);
+					return be64toh(*(uint64_t*)(tcpopt + (i + 2)));
+				}
+			}
+			else{
+				// Move to next option
+				i += optlen - 2;
+			}
+		}
+	}
+	//  No MPTCP options
 	return 0;
 }

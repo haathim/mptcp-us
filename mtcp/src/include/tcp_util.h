@@ -53,6 +53,9 @@ GetPeerKey(tcp_stream *cur_stream,
 		uint32_t cur_ts, uint8_t *tcpopt, int len);
 
 uint32_t
+GetToken(uint64_t key);
+
+uint32_t
 GetPeerIdsnFromKey(uint64_t key);
 
 uint32_t
@@ -60,5 +63,11 @@ GetDataAck(tcp_stream *cur_stream, uint8_t *tcpopt, int len);
 
 uint32_t
 GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len);
+
+void hmac_sha1(const unsigned char *key, int key_len, const unsigned char *message, int message_len, unsigned char *digest);
+
+void mp_join_hmac_generator(uint64_t key1, uint64_t key2, uint32_t num1, uint32_t num2, unsigned char* hash);
+
+uint64_t checkMP_JOIN_SYN_ACK(tcp_stream *cur_stream, uint32_t cur_ts, uint8_t *tcpopt, int len);
 
 #endif /* TCP_UTIL_H */	

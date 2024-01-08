@@ -743,7 +743,6 @@ mtcp_connect(mctx_t mctx, int sockid,
 
 	socket = &mtcp->smap[sockid];
 	if (socket->stream) {
-		//printf("Chu is coming...\n");
 		TRACE_API("Socket %d: stream already exist!\n", sockid);
 		if (socket->stream->state >= TCP_ST_ESTABLISHED) {
 			errno = EISCONN;
@@ -800,6 +799,7 @@ mtcp_connect(mctx_t mctx, int sockid,
 	if (mptcp_cb)
 	{
 		cur_stream->isMPJOINStream = 1;
+		cur_stream->mptcp_cb = mptcp_cb;
 	}
 	
 	if (!cur_stream) {
@@ -837,7 +837,6 @@ mtcp_connect(mctx_t mctx, int sockid,
 	} else {
 
 		while (1) {
-			printf("Chu is coming...\n");
 			// This place looping indefintely
 			if (!cur_stream) {
 				TRACE_ERROR("STREAM DESTROYED\n");
@@ -1640,7 +1639,7 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 	if(cur_stream->mptcp_cb != NULL){
 		write_count++;
 		// printf("write_count: %d\n", write_count);
-		if (write_count == 1)
+		if (write_count == 100)
 		{
 			// starting a mp_join
 			// create a socket for the new subflow (do we really need? for now doing just so easy to put addresses)

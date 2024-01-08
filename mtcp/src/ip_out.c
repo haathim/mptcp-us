@@ -145,7 +145,6 @@ IPOutput(struct mtcp_manager *mtcp, tcp_stream *stream, uint16_t tcplen)
 		stream->sndvar->nif_out = nif;
 		stream->is_external = is_external;
 	}
-	printf("is_external: %d\n", is_external);
 
 	haddr = GetDestinationHWaddr(stream->daddr, stream->saddr, stream->is_external);
 	if (!haddr) {

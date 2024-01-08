@@ -217,6 +217,7 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 		}
 		else if(mptcp_option == MPTCP_OPTION_JOIN){
 			optlen += 24;
+			printf("ACK MP_JOIN arrived\n");
 		}
 
 
@@ -316,14 +317,24 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			tcpopt[i++] = ((TCP_MPTCP_SUBTYPE_JOIN << 4) | TCP_MPTCP_VERSION);
 		
 			//Address ID
-			tcpopt[i++] = 0x01;
+			tcpopt[i++] = 0x02;
 
 			// Reciver's Token (32 bits)
 			
+			uint32_t token = GetToken(cur_stream->mptcp_cb->peerKey);
+			
+			tcpopt[i++] = token >> 24;
+			tcpopt[i++] = token >> 16;
+			tcpopt[i++] = token >> 8;
+			tcpopt[i++] = token;
 
 			// Sender's Random Number (32 bits)
-			
+			tcpopt[i++] = 0x00;
+			tcpopt[i++] = 0x00;
+			tcpopt[i++] = 0x00;
+			tcpopt[i++] = 0x20;
 
+			cur_stream->myRandomNumber = 32;
 		}
 		else{
 
@@ -485,12 +496,34 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			tcpopt[i++] = TCP_OPT_MPTCP;
 
 			// Length
-			tcpopt[i++] = 4;
+			tcpopt[i++] = 24;
 
 			// MPTCP MP_JOIN Subtype
 			tcpopt[i++] = ((TCP_MPTCP_SUBTYPE_JOIN << 4) | TCP_MPTCP_VERSION);
 		
-			// ....rest needs to fill in
+			//Address ID
+			tcpopt[i++] = 0x00;
+
+			// Sender's HMAC 160 bits
+			unsigned char hash[20];
+			
+			mp_join_hmac_generator(htobe64((uint64_t)(16)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
+
+			// print peerkey, myrandomnumber, peerRandomNumber
+			printf("PeerKey: %lu\n", cur_stream->mptcp_cb->peerKey);
+			printf("MyRandomNumber: %u\n", cur_stream->myRandomNumber);
+			printf("PeerRandomNumber: %u\n", cur_stream->peerRandomNumber);
+
+			//print the hash in hex
+			printf("Hash: ");
+			for(int j = 0; j < 20; j++){
+				printf("%02x", hash[j]);
+			}
+			printf("\n");
+
+			for(int j = 0; j < 20; j++){
+				tcpopt[i++] = hash[j];
+			}
 		}
 		else{
 			

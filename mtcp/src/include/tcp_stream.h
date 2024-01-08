@@ -188,6 +188,8 @@ typedef struct tcp_stream
 	mptcp_cb *mptcp_cb;
 	uint8_t isReceivedMPCapableSYN;
 	uint64_t peerKey;
+	uint32_t myRandomNumber;
+	uint32_t peerRandomNumber;
 
 	uint16_t on_timeout_list:1, 
 			on_rcv_br_list:1, 
