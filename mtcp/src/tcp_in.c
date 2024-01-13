@@ -845,6 +845,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 				cur_stream->mptcp_cb->mpcb_stream->snd_nxt = cur_stream->mptcp_cb->my_idsn + 1;
 				cur_stream->mptcp_cb->mpcb_stream->rcv_nxt = cur_stream->mptcp_cb->peer_idsn + 1;
 				cur_stream->mptcp_cb->mpcb_stream->state = TCP_ST_ESTABLISHED;
+				cur_stream->mptcp_cb->num_streams = 1;
 			}
 		
 			// Need to check for the MP_JOIN option
@@ -852,6 +853,9 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			{
 				truncatedHMAC = checkMP_JOIN_SYN_ACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 				printf("Truncated HMAC: %lu\n", truncatedHMAC);
+				// TODO: Need to check if Server's response is correct
+
+				cur_stream->mptcp_cb->tcp_streams[++cur_stream->mptcp_cb->num_streams] = cur_stream;
 			}
 			
 			
@@ -964,6 +968,7 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 		tcp_stream* cur_stream, struct tcphdr* tcph, uint32_t seq, uint32_t ack_seq,
 		uint8_t *payload, int payloadlen, uint16_t window) 
 {
+	
 	if (tcph->syn) {
 		TRACE_DBG("Stream %d (TCP_ST_ESTABLISHED): weird SYN. "
 				"seq: %u, expected: %u, ack_seq: %u, expected: %u\n", 

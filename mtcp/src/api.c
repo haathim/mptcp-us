@@ -1527,7 +1527,15 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 	cur_stream = socket->stream;
 	if (cur_stream->mptcp_cb != NULL){
 		mpcb_stream = cur_stream->mptcp_cb->mpcb_stream;
-		cur_stream = cur_stream->mptcp_cb->tcp_streams[0]; //decided by scheduler
+		if (cur_stream->mptcp_cb->num_streams == 1)
+		{
+			cur_stream = cur_stream->mptcp_cb->tcp_streams[0];
+		}
+		else{
+			cur_stream = cur_stream->mptcp_cb->tcp_streams[1];
+		}
+		
+		 //decided by scheduler
 	}
 	
 	if (!cur_stream || 
@@ -1639,7 +1647,7 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 	if(cur_stream->mptcp_cb != NULL){
 		write_count++;
 		// printf("write_count: %d\n", write_count);
-		if (write_count == 100)
+		if (write_count == 2)
 		{
 			// starting a mp_join
 			// create a socket for the new subflow (do we really need? for now doing just so easy to put addresses)

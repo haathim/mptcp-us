@@ -66,6 +66,7 @@ struct mptcp_cb{
     
     // why do I have to put struct in front of tcp_stream (else getting compiler error)
     struct tcp_stream *tcp_streams[10];
+    int num_streams;
 };
 
 

@@ -566,6 +566,11 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 	// Check if no SYN, because no SYN means data right?
 	// or just check payload length?
 	if(payloadlen > 0){
+		
+		if (cur_stream->isMPJOINStream)
+		{
+			printf("Sending from MPJOIN stream with some payload\n");
+		}
 		// Add DSS option
 
 		// Add MPTCP option Kind
