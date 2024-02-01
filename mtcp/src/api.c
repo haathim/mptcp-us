@@ -696,7 +696,6 @@ int
 mtcp_connect(mctx_t mctx, int sockid, 
 		const struct sockaddr *addr, socklen_t addrlen, mptcp_cb *mptcp_cb)
 {
-	printf("mtcp_connect called\n");
 	mtcp_manager_t mtcp;
 	socket_map_t socket;
 	tcp_stream *cur_stream;
@@ -759,6 +758,7 @@ mtcp_connect(mctx_t mctx, int sockid,
 	if ((socket->opts & MTCP_ADDR_BIND) && 
 	    socket->saddr.sin_port != INPORT_ANY &&
 	    socket->saddr.sin_addr.s_addr != INADDR_ANY) {
+		printf("if: mtcp_connect\n");
 		int rss_core;
 		uint8_t endian_check = FetchEndianType();
 		
@@ -770,13 +770,12 @@ mtcp_connect(mctx_t mctx, int sockid,
 			return -1;
 		}
 	} else {
-		
+		printf("else: mtcp connect\n");
 		if (mtcp->ap) {
 			ret = FetchAddressPerCore(mtcp->ap, 
 						  mctx->cpu, num_queues, addr_in, &socket->saddr);
 		} else {
 			uint8_t is_external;
-			printf("mtcp_connect .......\n");
 			nif = GetOutputInterface(dip, socket->saddr.sin_addr.s_addr, &is_external);
 			if (nif < 0) {
 				errno = EINVAL;
@@ -1671,9 +1670,9 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 			// create a tcpstream
 			// CreateTCPStream(mtcp, socket, socket->socktype, 
 			// 		socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, dip, dport);
-			printf("Calling mtcp_connect\n");
+			// printf("Calling mtcp_connect\n");
 			int new_subflow_ret = mtcp_connect(mctx, new_subflow_sockid, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), cur_stream->mptcp_cb);
-			printf("Returned Value from mtcp_connect is: %d\n", new_subflow_ret);
+			// printf("Returned Value from mtcp_connect is: %d\n", new_subflow_ret);
 			
 			// tcp_stream* subflow_tcp_stream = CreateTCPStream(mtcp, new_subflow_socket, new_subflow_socket->socktype, socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, addr.sin_addr.s_addr, cur_stream->dport);
 			

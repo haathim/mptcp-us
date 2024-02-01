@@ -852,10 +852,10 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			if (cur_stream->isMPJOINStream)
 			{
 				truncatedHMAC = checkMP_JOIN_SYN_ACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-				printf("Truncated HMAC: %lu\n", truncatedHMAC);
+				// printf("Truncated HMAC: %lu\n", truncatedHMAC);
 				// TODO: Need to check if Server's response is correct
 
-				cur_stream->mptcp_cb->tcp_streams[++cur_stream->mptcp_cb->num_streams] = cur_stream;
+				cur_stream->mptcp_cb->tcp_streams[cur_stream->mptcp_cb->num_streams++] = cur_stream;
 			}
 			
 			
@@ -871,6 +871,9 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			RemoveFromRTOList(mtcp, cur_stream);
 			cur_stream->state = TCP_ST_ESTABLISHED;
 			TRACE_STATE("Stream %d: TCP_ST_ESTABLISHED\n", cur_stream->id);
+
+			//TODO: Try to send MP_JOIN here (instead of at mtcp_write)
+			// Tried. Problem with passing mctx arg as it does not exist in the current function scope
 
 			if (cur_stream->socket) {
 				RaiseWriteEvent(mtcp, cur_stream);

@@ -31,8 +31,8 @@ GetOutputInterface(uint32_t daddr, uint32_t saddr, uint8_t *is_external)
 				
 					for ( j = 0; j < CONFIG.gatewayCount; j++)
 					{
-						printf("j: %d\n", j);
-						printf("saddr: %u, gateway_saddr: %u\n", saddr, CONFIG.gateway[j]->saddr);
+						// printf("j: %d\n", j);
+						// printf("saddr: %u, gateway_saddr: %u\n", saddr, CONFIG.gateway[j]->saddr);
 						if (CONFIG.gateway[j] && CONFIG.gateway[j]->saddr == saddr){
 							*is_external = 1;
 							nif = (CONFIG.gateway[j])->nif;
