@@ -368,7 +368,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		tcpopt[i++] = cur_stream->sndvar->wscale_mine;
 		
 	}
-	else if(flags == (TCP_FLAG_SYN | TCP_FLAG_ACK)){
+	else if(flags == (TCP_FLAG_SYN | TCP_FLAG_ACK) && cur_stream->isReceivedMPCapableSYN){
 
 		// MPTCP
 		if(mptcp_option == MPTCP_OPTION_CAPABLE){
