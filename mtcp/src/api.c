@@ -668,7 +668,6 @@ mtcp_init_rss(mctx_t mctx, in_addr_t saddr_base, int num_addr,
 
 		/* for the INADDR_ANY, find the output interface for the destination
 		   and set the saddr_base as the ip address of the output interface */
-		printf("mtcp init rss\n");
 		nif_out = GetOutputInterface(daddr, saddr_base, &is_external);
 		if (nif_out < 0) {
 			errno = EINVAL;

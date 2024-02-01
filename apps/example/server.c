@@ -18,6 +18,7 @@ int main() {
 
     // Initialize mTCP
     ret = mtcp_init("server.conf");
+    printf("I am here\n");
     if (ret) {
         fprintf(stderr, "mtcp_init failed: %s\n", strerror(-ret));
         return -1; 
