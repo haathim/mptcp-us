@@ -754,8 +754,12 @@ Handle_TCP_ST_LISTEN (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// Have to check for MP options here
 	// use something like ParseMPTCP options
 	uint8_t mptcp_option = ParseMPTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-	if (mptcp_option == MPTCP_OPTION_CAPABLE) {
+	uint64_t peerKey = GetPeerKey(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+	if (mptcp_option == MPTCP_OPTION_CAPABLE && peerKey) {
 		cur_stream->isReceivedMPCapableSYN = 1;
+		cur_stream->mptcp_cb = (mptcp_cb *)calloc(1, sizeof(mptcp_cb));
+		cur_stream->mptcp_cb->peerKey = peerKey;
+		
 	}
 
 	if (tcph->syn) {
@@ -830,10 +834,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 				socket_map_t socket;
 				socket = cur_stream->socket;
 				cur_stream->mptcp_cb->mpcb_stream = CreateMpcbTCPStream(mtcp, socket, socket->socktype, socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, cur_stream->daddr, cur_stream->dport);
-				if (cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcvbuf != NULL)
-				{
-					//printf("!!!!!YAYYYYYY!!!!1\n");
-				}
+
 				
 				cur_stream->mptcp_cb->tcp_streams[0] = cur_stream;
 				cur_stream->mptcp_cb->peer_idsn = GetPeerIdsnFromKey(peerKey);
@@ -905,6 +906,8 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		tcp_stream* cur_stream, struct tcphdr* tcph, uint32_t ack_seq) 
 {
 	struct tcp_send_vars *sndvar = cur_stream->sndvar;
+	uint64_t peerKey = 0, myKey = 0;
+	uint8_t mptcp_option;
 	int ret;
 	if (tcph->ack) {
 		struct tcp_listener *listener;
@@ -934,6 +937,49 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 		cur_stream->state = TCP_ST_ESTABLISHED;
 		TRACE_STATE("Stream %d: TCP_ST_ESTABLISHED\n", cur_stream->id);
+		// TODO: Here only need to make to Multipath TCP connection (but did i store the peer key that i sent?)
+		// check if keys are correct
+		mptcp_option = ParseMPTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+		peerKey = GetPeerKey(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+
+		if (mptcp_option == MPTCP_OPTION_CAPABLE && peerKey && cur_stream->mptcp_cb != NULL) {
+			
+			if(peerKey == cur_stream->mptcp_cb->peerKey){
+				myKey = GetMyKeyFromMPCapbleACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+				if(myKey == 16){
+					// socket_map_t socket;
+					// socket = cur_stream->socket; 
+					//Above is problem
+					// Still a socket has not been assigned to this
+					// only when issue the accept call the socket will be assigned
+					// so either have to do all this in the accept call or replace manually all the socket values
+
+					// Maybe do what we can do here and the rest in the accept call
+					// cur_stream->mptcp_cb->mpcb_stream = CreateMpcbTCPStream(mtcp, socket, socket->socktype, socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, cur_stream->daddr, cur_stream->dport);
+					cur_stream->mptcp_cb->mpcb_stream = CreateMpcbTCPStream(mtcp, NULL, MTCP_SOCK_STREAM, cur_stream->saddr, cur_stream->sport, cur_stream->daddr, cur_stream->dport);
+					
+
+					// Another problem
+					// we are doing all for the listener and not the accepted stream
+					// Have to think a lot
+					
+					cur_stream->mptcp_cb->tcp_streams[0] = cur_stream;
+					cur_stream->mptcp_cb->peer_idsn = GetPeerIdsnFromKey(peerKey);
+					cur_stream->mptcp_cb->mpcb_stream->rcvvar->irs = GetPeerIdsnFromKey(peerKey);
+					cur_stream->mptcp_cb->mpcb_stream->sndvar->iss = 1285339236;
+					cur_stream->mptcp_cb->my_idsn = 1285339236;
+					cur_stream->mptcp_cb->peerKey = peerKey;
+					cur_stream->mptcp_cb->mpcb_stream->snd_nxt = cur_stream->mptcp_cb->my_idsn + 1;
+					cur_stream->mptcp_cb->mpcb_stream->rcv_nxt = cur_stream->mptcp_cb->peer_idsn + 1;
+					cur_stream->mptcp_cb->mpcb_stream->state = TCP_ST_ESTABLISHED;
+					cur_stream->mptcp_cb->num_streams = 1;
+
+
+				}
+			}
+										
+		}
+
 
 		/* update listening socket */
 		listener = (struct tcp_listener *)ListenerHTSearch(mtcp->listeners, &tcph->dest);

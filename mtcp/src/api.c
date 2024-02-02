@@ -621,6 +621,20 @@ mtcp_accept(mctx_t mctx, int sockid, struct sockaddr *addr, socklen_t *addrlen)
 		socket->saddr.sin_family = AF_INET;
 		socket->saddr.sin_port = accepted->dport;
 		socket->saddr.sin_addr.s_addr = accepted->daddr;
+		// if (accepted->mptcp_cb != NULL)
+		// {
+		// 	printf("MACCHAN GODA BN --UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU\n");
+		// }
+		// This is not right
+		// have to do when tcp become establoshed
+		// accepted->mptcp_cb->mpcb_stream = CreateMpcbTCPStream(mtcp, socket, socket->socktype, socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, accepted->daddr, accepted->dport);
+		// accepted->mptcp_cb->mpcb_stream->rcvvar->irs = GetPeerIdsnFromKey(accepted->mptcp_cb->peerKey);
+		// accepted->mptcp_cb->mpcb_stream->sndvar->iss = 1285339236;
+		// accepted->mptcp_cb->mpcb_stream->snd_nxt = accepted->mptcp_cb->my_idsn + 1;
+		// accepted->mptcp_cb->mpcb_stream->rcv_nxt = accepted->mptcp_cb->peer_idsn + 1;
+		// accepted->mptcp_cb->mpcb_stream->state = TCP_ST_ESTABLISHED;
+
+
 	}
 
 	if (!(listener->socket->epoll & MTCP_EPOLLET) &&

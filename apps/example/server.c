@@ -95,11 +95,10 @@ int main() {
                 } else if (events[i].events & MTCP_EPOLLIN){
                     fprintf(stdout, "I have recieved some message\n");
                     // delay for 5 seconds
-                    sleep(5);
+                    // sleep(5);
                 }
                 
         }
-        printf("I am here\n");
     }
 
     // Close the listening socket and destroy the mTCP context

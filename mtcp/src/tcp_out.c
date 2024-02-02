@@ -196,7 +196,7 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 		}
 
 	}
-	else if (flags == TCP_FLAG_ACK && payloadlen == 0)
+	else if (flags == TCP_FLAG_ACK && payloadlen == 0 && mptcp_option != 2)
 	{
 		//printf("ACK with no payload\n");
 #if TCP_OPT_TIMESTAMP_ENABLED
@@ -234,7 +234,7 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 			optlen += TCP_OPT_SACK_LEN + 2;
 		}
 #endif
-		if(payloadlen > 0){
+		if(payloadlen > 0 || mptcp_option == 2){
 			//printf("Payload is present\n");
 			optlen += 20;
 		}
@@ -441,7 +441,8 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		tcpopt[i++] = cur_stream->sndvar->wscale_mine;
 		
 	}
-	else if(flags == TCP_FLAG_ACK && payloadlen == 0){
+	// TODO: Check if can remove the payloadlen check
+	else if(flags == TCP_FLAG_ACK && payloadlen == 0 && isControlMsg){
 
 
 		// MPTCP
@@ -565,7 +566,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 	// Check if no SYN, because no SYN means data right?
 	// or just check payload length?
-	if(payloadlen > 0){
+	if(payloadlen > 0 || !isControlMsg){
 		
 		// Add DSS option
 
@@ -721,6 +722,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 	}
 	
 
+
 	// first check if sending MP_CAPABLE OR MP_JOIN
 	// if(cur_stream->socket->stream != (struct tcp_stream*)(&cur_stream)){
 	// 	// this is not the first subflow
@@ -729,10 +731,26 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	// If sending a SYN/ACK have to check if first SYN was with MP_CAPABLE OR NOT
 	// Can we use isControlMsg for that also? as in set isControlMsg to 0 if its is a normal SYN/ACK
-	if(isControlMsg){
+	// TODO: Cleanup
+	if(flags == (TCP_FLAG_SYN | TCP_FLAG_ACK)){
+		if(cur_stream->isReceivedMPCapableSYN){
+			optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, 0);
+		}
+		
+		else{
+			optlen = CalculateOptionLength(flags);
+		}
+	}
+	else if(isControlMsg){
 		// //printf("Control message\n");
-		optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, payloadlen);
-	}else{
+		// TODO: As the server, when sending SYN/ACK (ctrl msg) have to check if recevied syn before calling below fn (optionlength)
+		optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, 0);
+	}
+	else if(cur_stream->mptcp_cb != NULL){
+		// Here it should be not a control message but a data packet. Thats why im passing 2 without 0 or 1
+		optlen = CalculateOptionLengthMPTCP(flags, 2, payloadlen);
+	}
+	else{
 		// //printf("Normal packet\n");
 		optlen = CalculateOptionLength(flags);
 	}
@@ -1103,13 +1121,9 @@ FlushTCPSendingBuffer(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_
                     goto out;
                 }
 #endif
-		uint8_t isMPTCP = 0;
-		if (cur_stream->mptcp_cb != NULL){
-			isMPTCP = 1;
-		}
 		
 		if ((sndlen = SendTCPPacket(mtcp, cur_stream, cur_ts,
-					    TCP_FLAG_ACK, data, pkt_len, isMPTCP)) < 0) {
+					    TCP_FLAG_ACK, data, pkt_len, 0)) < 0) {
 			/* there is no available tx buf */
 			packets = -3;
 			goto out;
@@ -1146,10 +1160,12 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	} else if (cur_stream->state == TCP_ST_ESTABLISHED) {
 		/* Send ACK here */
+		printf("TCP_ST_ESTABLISHED\n");
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
 
 	} else if (cur_stream->state == TCP_ST_CLOSE_WAIT) {
 		/* Send ACK for the FIN here */
+		printf("TCP_ST_CLOSE_WAIT\n");
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
 
 	} else if (cur_stream->state == TCP_ST_LAST_ACK) {
@@ -1173,6 +1189,7 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	} else if (cur_stream->state == TCP_ST_FIN_WAIT_2) {
 		/* Send ACK here */
+		printf("TCP_ST_FIN_WAIT_2\n");
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
 
 	} else if (cur_stream->state == TCP_ST_CLOSING) {
@@ -1182,6 +1199,7 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 				ret = SendTCPPacket(mtcp, cur_stream, cur_ts, 
 						TCP_FLAG_FIN | TCP_FLAG_ACK, NULL, 0, 1);
 			} else {
+				printf("TCP_ST_CLOSING\n");
 				ret = SendTCPPacket(mtcp, cur_stream, cur_ts, 
 						TCP_FLAG_ACK, NULL, 0, 1);
 			}
@@ -1193,6 +1211,7 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	} else if (cur_stream->state == TCP_ST_TIME_WAIT) {
 		/* Send ACK here */
+		printf("TCP_ST_TIME_WAIT\n");
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
 
 	} else if (cur_stream->state == TCP_ST_CLOSED) {
@@ -1414,7 +1433,7 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 				/* send the queued ack packets */
 				while (cur_stream->sndvar->ack_cnt > 0) {
 					ret = SendTCPPacket(mtcp, cur_stream, 
-							cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
+							cur_ts, TCP_FLAG_ACK, NULL, 0, 0);
 					if (ret < 0) {
 						/* since there is no available write buffer, break */
 						break;
