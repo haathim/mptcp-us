@@ -2,3 +2,5 @@ Makefile
 epserver
 epwget
 log_*
+server
+
