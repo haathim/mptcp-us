@@ -18,7 +18,6 @@ int main() {
 
     // Initialize mTCP
     ret = mtcp_init("server.conf");
-    printf("I am here\n");
     if (ret) {
         fprintf(stderr, "mtcp_init failed: %s\n", strerror(-ret));
         return -1; 
@@ -93,7 +92,7 @@ int main() {
 
                         }
                 } else if (events[i].events & MTCP_EPOLLIN){
-                    fprintf(stdout, "I have recieved some message\n");
+                    printf("I have recieved some message\n");
                     // delay for 5 seconds
                     // sleep(5);
                 }
