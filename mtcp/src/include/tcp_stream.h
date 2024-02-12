@@ -187,6 +187,7 @@ typedef struct tcp_stream
 	mptcp_tcp_sock *mptcp_sock;
 	mptcp_cb *mptcp_cb;
 	uint8_t isReceivedMPCapableSYN;
+	uint8_t isReceivedMPJoinSYN;
 	uint64_t peerKey;
 	uint32_t myRandomNumber;
 	uint32_t peerRandomNumber;

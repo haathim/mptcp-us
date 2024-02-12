@@ -126,7 +126,7 @@ CleanServerVariable(struct server_vars *sv)
 	sv->total_sent = 0;
 	sv->done = 0;
 	sv->rspheader_sent = 0;
-	sv->keep_alive = 0;
+	// sv->keep_alive = 0;
 }
 /*----------------------------------------------------------------------------*/
 void 
@@ -189,7 +189,7 @@ SendUntilAvailable(struct thread_context *ctx, int sockid, struct server_vars *s
 static int
 HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
 {
-        printf("Inside HandleReadEvent\n");
+        // printf("Inside HandleReadEvent\n");
         struct mtcp_epoll_event ev;
         char buf[HTTP_HEADER_LEN];
         char url[URL_LEN];
@@ -208,12 +208,13 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         if (rd <= 0) { 
                 return rd;
         }
+		printf("Received: %s\n", buf);
         memcpy(sv->request + sv->recv_len, 
                         (char *)buf, MIN(rd, HTTP_HEADER_LEN - sv->recv_len));
         sv->recv_len += rd; 
         //sv->request[rd] = '\0';
         //fprintf(stderr, "HTTP Request: \n%s", request);
-        printf("Inside HandleReadEvent 1\n");
+        // printf("Inside HandleReadEvent 1\n");
         // sv->request_len = find_http_header(sv->request, sv->recv_len);
         // if (sv->request_len <= 0) {
         //         TRACE_ERROR("Socket %d: Failed to parse HTTP request header.\n"
@@ -224,14 +225,14 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         //         return rd;
         // }
 
-        printf("Inside HandleReadEvent 2\n");
+        // printf("Inside HandleReadEvent 2\n");
         // http_get_url(sv->request, sv->request_len, url, URL_LEN);
         // TRACE_APP("Socket %d URL: %s\n", sockid, url);
         // sprintf(sv->fname, "%s%s", www_main, url);
         // TRACE_APP("Socket %d File name: %s\n", sockid, sv->fname);
 
-        printf("Inside HandleReadEvent 3\n");
-        sv->keep_alive = FALSE;
+        // printf("Inside HandleReadEvent 3\n");
+        sv->keep_alive = TRUE;
         // if (http_header_str_val(sv->request, "Connection: ",
         //                         strlen("Connection: "), keepalive_str, 128)) {
         //         if (strstr(keepalive_str, "Keep-Alive")) {
@@ -241,7 +242,7 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         //         }
         // }
 
-        printf("Inside HandleReadEvent 4\n");
+        // printf("Inside HandleReadEvent 4\n");
         /* Find file in cache */
         // scode = 404;
         // for (i = 0; i < nfiles; i++) {
@@ -255,7 +256,7 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         // TRACE_APP("Socket %d File size: %ld (%ldMB)\n",
                         // sockid, sv->fsize, sv->fsize / 1024 / 1024);
 
-        printf("Inside HandleReadEvent 5\n");
+        // printf("Inside HandleReadEvent 5\n");
         /* Response header handling */
         // time(&t_now);
         // strftime(t_str, 128, "%a, %d %b %Y %X GMT", gmtime(&t_now));
@@ -264,7 +265,7 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         // else
         //         sprintf(keepalive_str, "Close");
 
-        printf("Inside HandleReadEvent 6\n");
+        // printf("Inside HandleReadEvent 6\n");
         // sprintf(response, "HTTP/1.1 %d %s\r\n"
         //                 "Date: %s\r\n"
         //                 "Server: Webserver on Middlebox TCP (Ubuntu)\r\n"
@@ -272,14 +273,14 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         //                 "Connection: %s\r\n\r\n",
         //                 scode, StatusCodeToString(scode), t_str, sv->fsize, keepalive_str);
 
-        printf("Inside HandleReadEvent 1\n");
+        // printf("Inside HandleReadEvent 1\n");
         // set response to "I have recieved your message"
         sprintf(response, "I have recieved your message");
         len = strlen(response);
         // TRACE_APP("Socket %d HTTP Response: \n%s", sockid, response);
-        printf("Before mtcp_write\n");
+        // printf("Before mtcp_write\n");
         sent = mtcp_write(ctx->mctx, sockid, response, len);
-        printf("After mtcp_write\n");
+        // printf("After mtcp_write\n");
         // TRACE_APP("Socket %d Sent response header: try: %d, sent: %d\n",
                         //sockid, len, sent);
         assert(sent == len); 
@@ -289,9 +290,9 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         ev.data.sockid = sockid;
         mtcp_epoll_ctl(ctx->mctx, ctx->ep, MTCP_EPOLL_CTL_MOD, sockid, &ev);
 
-        printf("Inside HandleReadEvent 7\n");
-        SendUntilAvailable(ctx, sockid, sv);
-        printf("Inside HandleReadEvent 8\n");
+        // printf("Inside HandleReadEvent 7\n");
+        // SendUntilAvailable(ctx, sockid, sv);
+        // printf("Inside HandleReadEvent 8\n");
 
         return rd;
 }
@@ -305,6 +306,7 @@ AcceptConnection(struct thread_context *ctx, int listener)
 	struct mtcp_epoll_event ev;
 	int c;
 
+	printf("Accepting a new connection .......\n");
 	c = mtcp_accept(mctx, listener, NULL, NULL);
 
 	if (c >= 0) {
@@ -320,7 +322,7 @@ AcceptConnection(struct thread_context *ctx, int listener)
 		ev.data.sockid = c;
 		mtcp_setsock_nonblock(ctx->mctx, c);
 		mtcp_epoll_ctl(mctx, ctx->ep, MTCP_EPOLL_CTL_ADD, c, &ev);
-		printf("Socket registered!\n");
+		// printf("Socket registered!\n");
 		TRACE_APP("Socket %d registered.\n", c);
 
 	} else {
@@ -498,17 +500,16 @@ RunServerThread(void *arg)
 						&ctx->svars[events[i].data.sockid]);
 
 			} else if (events[i].events & MTCP_EPOLLIN) {
-				printf("Got an EPOLLIN!\n");
 				ret = HandleReadEvent(ctx, events[i].data.sockid, 
 						&ctx->svars[events[i].data.sockid]);
 
 				if (ret == 0) {
-					printf("Got ret ==0!\n");
+					// printf("Got ret ==0!\n");
 					/* connection closed by remote host */
 					CloseConnection(ctx, events[i].data.sockid, 
 							&ctx->svars[events[i].data.sockid]);
 				} else if (ret < 0) {
-					printf("Got ret <0!\n");
+					// printf("Got ret <0!\n");
 					/* if not EAGAIN, it's an error */
 					if (errno != EAGAIN) {
 						printf("Got EAGAIN!\n");
@@ -534,9 +535,9 @@ RunServerThread(void *arg)
 		/* if do_accept flag is set, accept connections */
 		if (do_accept) {
 			while (1) {
-				printf("Connection Going to get Accepted!\n");
+				// printf("Connection Going to get Accepted!\n");
 				ret = AcceptConnection(ctx, listener);
-				printf("Connection Accepted!\n");
+				// printf("Connection Accepted!\n");
 				if (ret < 0)
 					break;
 			}

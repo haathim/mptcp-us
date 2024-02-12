@@ -22,6 +22,7 @@
 #include "logger.h"
 #include "stat.h"
 #include "io_module.h"
+// #include "mptcp.h"
 
 #ifdef ENABLE_ONVM
 #include "onvm_nflib.h"
@@ -111,6 +112,12 @@
 	     (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
 	     (var) = (tvar))
 #endif
+/*----------------------------------------------------------------------------*/
+struct mptcp_connections {
+    uint32_t token[10];
+    struct mptcp_cb* mptcp_cbs[10];
+    int num_connections;
+};
 /*----------------------------------------------------------------------------*/
 struct eth_table
 {
@@ -251,6 +258,7 @@ struct mtcp_manager
 	uint32_t ts_last_event;
 
 	struct hashtable *listeners;
+	struct mptcp_connections mptcp_conns;
 
 	stream_queue_t connectq;				/* streams need to connect */
 	stream_queue_t sendq;				/* streams need to send data */

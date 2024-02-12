@@ -56,6 +56,14 @@ uint64_t
 GetMyKeyFromMPCapbleACK(tcp_stream *cur_stream, 
 		uint32_t cur_ts, uint8_t *tcpopt, int len);
 
+uint32_t 
+GetTokenFromMPJoinSYN(tcp_stream *cur_stream, 
+		uint32_t cur_ts, uint8_t *tcpopt, int len);
+
+uint32_t 
+GetPeerRandomNumberFromMPJoinSYN(tcp_stream *cur_stream, 
+		uint32_t cur_ts, uint8_t *tcpopt, int len);
+
 uint32_t
 GetToken(uint64_t key);
 

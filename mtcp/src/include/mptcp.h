@@ -60,6 +60,7 @@ struct mptcp_cb{
     uint32_t my_idsn;
     uint32_t peer_idsn;
     uint64_t peerKey;
+    uint64_t myKey;
     uint32_t ack_to_send;
     uint32_t seq_no_to_send;
     struct tcp_stream *mpcb_stream;
@@ -69,7 +70,11 @@ struct mptcp_cb{
     int num_streams;
 };
 
-
+// struct mptcp_connections {
+//     uint32_t token[10];
+//     struct mptcp_cb* mptcp_cbs[10];
+//     int num_connections;
+// };
 
 // MPTCP header structure
 // struct mptcp_hdr {

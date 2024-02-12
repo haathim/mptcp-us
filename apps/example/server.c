@@ -9,7 +9,7 @@
 
 #define PORT_NUM 12345
 #define MAX_CONNECTIONS 3
-#define MAX_EVENTS 3
+#define MAX_EVENTS 10000
 
 
 int main() {
@@ -79,23 +79,51 @@ int main() {
             exit(1);
         }
         // print number of events
-        printf("Number of events: %d\n", nevents);
+        // printf("Number of events: %d\n", nevents);
+        int acceptedOneConnection = 0;
         for (i = 0; i < nevents; i++) {
-                if (events[i].data.sockid == listen_sock) {                    
+                // printf("EVENT: %x\n", events[i].events);
+                if (events[i].data.sockid == listen_sock && acceptedOneConnection == 0) {                    
+                        acceptedOneConnection = 1;
                         int client_sock = mtcp_accept(mctx, listen_sock, (struct sockaddr *)&client_addr, &client_addr_len);
+                        ev.events = MTCP_EPOLLIN;
+                        ev.data.sockid = client_sock;
+                        mtcp_setsock_nonblock(mctx, client_sock);
+                        mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_ADD, client_sock, &ev);
                         printf("Accepted a new connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-                        sleep(5);
+                        // sleep(5);
                         if (client_sock < 0) {
                             fprintf(stderr, "mtcp_accept failed: %s\n", strerror(-client_sock));
                             continue;
                             // exit(1);
 
                         }
-                } else if (events[i].events & MTCP_EPOLLIN){
-                    printf("I have recieved some message\n");
+                        
+                }
+                else if (events[i].events & MTCP_EPOLLOUT){
+                    // printf("GOT AN EPOLLOUT!\n");
+                    char *response = "Hello, client I am server (FROM EPOLLOUT)!\n";
+                    mtcp_write(mctx, events[i].data.sockid, response, strlen(response));
+                    // delay for 5 seconds
+                    // sleep(5);
+                } 
+                else if (events[i].events & MTCP_EPOLLIN){
+                    // printf("GOT AN EPOLLIN! i = %d\n", i);
+                    char request[100];
+                    int n = mtcp_read(mctx, events[i].data.sockid, request, 100);
+                    printf("Request: %s\n", request);
+                    // char *response = "Hello, client I am server (FROM EPOLLIN)!\n";
+                    char response[100];
+                    sprintf(response, "Hello, client I am server (FROM EPOLLIN)! i = %d\n", i);
+                    mtcp_write(mctx, events[i].data.sockid, response, strlen(response));
                     // delay for 5 seconds
                     // sleep(5);
                 }
+                else{
+                    // printf("GOT AN UNKNOWN EVENT! %x\n", events[i].events);
+
+                }
+                
                 
         }
     }

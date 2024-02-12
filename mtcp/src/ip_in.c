@@ -21,6 +21,9 @@ ProcessIPv4Packet(mtcp_manager_t mtcp, uint32_t cur_ts,
 	int ip_len = ntohs(iph->tot_len);
 	int rc = -1;
 
+	// Added by Haathim. Don't why I'm getting packets with source IP 192.168.60.1, but I'm dropping them.
+	if(iph->saddr == 20752576) return FALSE;
+
 	/* drop the packet shorter than ip header */
 	if (ip_len < sizeof(struct iphdr))
 		return ERROR;

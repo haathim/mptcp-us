@@ -368,7 +368,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		tcpopt[i++] = cur_stream->sndvar->wscale_mine;
 		
 	}
-	else if(flags == (TCP_FLAG_SYN | TCP_FLAG_ACK) && cur_stream->isReceivedMPCapableSYN){
+	else if(flags == (TCP_FLAG_SYN | TCP_FLAG_ACK) && (cur_stream->isReceivedMPCapableSYN || cur_stream->isReceivedMPJoinSYN)){
 
 		// MPTCP
 		if(mptcp_option == MPTCP_OPTION_CAPABLE){
@@ -402,12 +402,28 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			tcpopt[i++] = TCP_OPT_MPTCP;
 
 			// Length
-			tcpopt[i++] = MPTCP_OPT_CAPABLE_SYNACK_LEN;
+			tcpopt[i++] = MPTCP_OPT_JOIN_SYNACK_LEN;
 
 			// MPTCP MP_JOIN Subtype
 			tcpopt[i++] = ((TCP_MPTCP_SUBTYPE_JOIN << 4) | TCP_MPTCP_VERSION);
+
+			// Address ID
+			tcpopt[i++] = 0x00;
 		
-			// ....rest needs to fill in
+			// Truncated HMAC 64 bits
+			unsigned char hash[20];
+			mp_join_hmac_generator(htobe64((uint64_t)(16)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
+			for(int j = 0; j < 8; j++){
+				tcpopt[i++] = hash[j];
+			}
+
+			// Server's random number
+			tcpopt[i++] = cur_stream->myRandomNumber >> 24;
+			tcpopt[i++] = cur_stream->myRandomNumber >> 16; //higher order bits will be discarded
+			tcpopt[i++] = cur_stream->myRandomNumber >> 8;
+			tcpopt[i++] = cur_stream->myRandomNumber;
+
+
 		}
 		else{
 
@@ -511,16 +527,16 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			mp_join_hmac_generator(htobe64((uint64_t)(16)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
 
 			// print peerkey, myrandomnumber, peerRandomNumber
-			printf("PeerKey: %lu\n", cur_stream->mptcp_cb->peerKey);
-			printf("MyRandomNumber: %u\n", cur_stream->myRandomNumber);
-			printf("PeerRandomNumber: %u\n", cur_stream->peerRandomNumber);
+			// printf("PeerKey: %lu\n", cur_stream->mptcp_cb->peerKey);
+			// printf("MyRandomNumber: %u\n", cur_stream->myRandomNumber);
+			// printf("PeerRandomNumber: %u\n", cur_stream->peerRandomNumber);
 
-			//print the hash in hex
-			printf("Hash: ");
-			for(int j = 0; j < 20; j++){
-				printf("%02x", hash[j]);
-			}
-			printf("\n");
+			// //print the hash in hex
+			// printf("Hash: ");
+			// for(int j = 0; j < 20; j++){
+			// 	printf("%02x", hash[j]);
+			// }
+			// printf("\n");
 
 			for(int j = 0; j < 20; j++){
 				tcpopt[i++] = hash[j];
@@ -716,8 +732,9 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	uint8_t mptcp_option = MPTCP_OPTION_CAPABLE;
 
-	if (cur_stream->isMPJOINStream)
+	if (cur_stream->isMPJOINStream || cur_stream->isReceivedMPJoinSYN)
 	{
+		printf("CHECKED MPJOIN SET AS OPTION\n");
 		mptcp_option = MPTCP_OPTION_JOIN;
 	}
 	
@@ -1432,6 +1449,10 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 			if (to_ack) {
 				/* send the queued ack packets */
 				while (cur_stream->sndvar->ack_cnt > 0) {
+					if(cur_stream->isReceivedMPJoinSYN){
+						printf("SakalaBuchan Kota kalisan. IP is %u\n", cur_stream->daddr);
+						
+					}
 					ret = SendTCPPacket(mtcp, cur_stream, 
 							cur_ts, TCP_FLAG_ACK, NULL, 0, 0);
 					if (ret < 0) {

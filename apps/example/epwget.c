@@ -243,8 +243,8 @@ SendHTTPRequest(thread_context_t ctx, int sockid, struct wget_vars *wv)
 	wv->recv = 0;
 	wv->header_len = wv->file_len = 0;
 
-	char *request = "Hello! I am client.\n";
-
+	// char *request = "Hello! I am client.\n";
+	char request[1024];
 // 	snprintf(request, HTTP_HEADER_LEN, "GET %s HTTP/1.0\r\n"
 // 			"User-Agent: Wget/1.12 (linux-gnu)\r\n"
 // 			"Accept: */*\r\n"
@@ -258,7 +258,9 @@ SendHTTPRequest(thread_context_t ctx, int sockid, struct wget_vars *wv)
 	int i;
 	for ( i = 0; i < 500; i++)
 	{
-		wr = mtcp_write(ctx->mctx, sockid, request, len);
+		memset(request, 0, sizeof(request));
+        snprintf(request, sizeof(request), "Hello, server! This is message %d\n", i);
+		wr = mtcp_write(ctx->mctx, sockid, request, len = strlen(request));
 
 	}
 	
