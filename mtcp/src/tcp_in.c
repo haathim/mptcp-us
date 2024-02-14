@@ -769,10 +769,10 @@ Handle_TCP_ST_LISTEN (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// TODO:Check for MP_JOIN option
 	if (mptcp_option == MPTCP_OPTION_JOIN) {
 		
-		printf("MP_JOIN option received\n");
+		// printf("MP_JOIN option received\n");
 		uint32_t token = GetTokenFromMPJoinSYN(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 		uint32_t peerRandomNumber = GetPeerRandomNumberFromMPJoinSYN(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-		printf("TOKEN is %u\n", token);
+		// printf("TOKEN is %u\n", token);
 		// Have to check if ok ot proceed
 		// check in the table if we have a mptcp connection for that token
 		cur_stream->isReceivedMPJoinSYN = 1;
@@ -972,14 +972,14 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		TRACE_STATE("Stream %d: TCP_ST_ESTABLISHED\n", cur_stream->id);
 		// TODO: Here only need to make to Multipath TCP connection (but did i store the peer key that i sent?)
 		// check if keys are correct
-		printf("Calling ParseMPTCPOptions 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\n");
+		// printf("Calling ParseMPTCPOptions 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\n");
 		mptcp_option = ParseMPTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-		printf("In the middle of th night..... %u\n", mptcp_option);
+		// printf("In the middle of th night..... %u\n", mptcp_option);
 		peerKey = GetPeerKey(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 		// print mptcp option
-		printf("MSYN_RCVD: PTCP Option: %u\n", mptcp_option);
+		// printf("MSYN_RCVD: PTCP Option: %u\n", mptcp_option);
 		if (mptcp_option == MPTCP_OPTION_CAPABLE && peerKey && cur_stream->mptcp_cb != NULL) {
-			printf("NOT HURRAY 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n");
+			// printf("NOT HURRAY 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n");
 			if(peerKey == cur_stream->mptcp_cb->peerKey){
 				myKey = GetMyKeyFromMPCapbleACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 				if(myKey == 16){
@@ -1017,10 +1017,10 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		}
 		else if (mptcp_option == (uint8_t)1)
 		{
-			printf("HURRRRAYYY 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n");
+			// printf("HURRRRAYYY 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n");
 
 			if(cur_stream->mptcp_cb != NULL){
-				printf("ESTABLISHED: MP_JOIN Stream\n");
+				// printf("ESTABLISHED: MP_JOIN Stream\n");
 				// check if the HMAC is correct
 				// uint8_t isHMACCorrect = checkHMAC(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 				uint8_t isHMACCorrect = 1; //assume true for now
@@ -1028,18 +1028,18 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 				// if yes then check if the response is correct
 				// and then enqueue an ack becuase client is waiting for it
 				if (isHMACCorrect){
-					printf("HMAC is correct#####################################################################################################\n");
-					printf("Calling EnqueueACK\n");
-					// EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
-					AddtoControlList(mtcp, cur_stream, cur_ts);
-					printf("Called EnqueueACK\n");
+					// printf("HMAC is correct#####################################################################################################\n");
+					// printf("Calling EnqueueACK\n");
+					EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
+					// AddtoControlList(mtcp, cur_stream, cur_ts);
+					// printf("Called EnqueueACK\n");
 				}
 			}
 		}
 		else{
-			printf("WHAT'S HAPPENINH\n");
+			// printf("WHAT'S HAPPENINH\n");
 			struct iphdr *iph = (struct iphdr *)((uint8_t *)tcph - sizeof(struct iphdr));
-			printf("IP Header Source Address: %u\n", iph->saddr);
+			// printf("IP Header Source Address: %u\n", iph->saddr);
 		}
 		
 		/* update listening socket */

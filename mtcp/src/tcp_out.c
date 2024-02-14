@@ -217,7 +217,7 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 		}
 		else if(mptcp_option == MPTCP_OPTION_JOIN){
 			optlen += 24;
-			printf("ACK MP_JOIN arrived\n");
+			// printf("ACK MP_JOIN arrived\n");
 		}
 
 
@@ -734,7 +734,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	if (cur_stream->isMPJOINStream || cur_stream->isReceivedMPJoinSYN)
 	{
-		printf("CHECKED MPJOIN SET AS OPTION\n");
+		// printf("CHECKED MPJOIN SET AS OPTION\n");
 		mptcp_option = MPTCP_OPTION_JOIN;
 	}
 	
@@ -1417,6 +1417,7 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 		next = TAILQ_NEXT(cur_stream, sndvar->ack_link);
 
 		if (cur_stream->sndvar->on_ack_list) {
+			// if(cur_stream->daddr == 205564096) printf("64.12 on ACK list\n");
 			/* this list is only to ack the data packets */
 			/* if the ack is not data ack, then it will not process here */
 			to_ack = FALSE;
@@ -1427,10 +1428,12 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 					cur_stream->state == TCP_ST_TIME_WAIT) {
 				/* TIMEWAIT is possible since the ack is queued 
 				   at FIN_WAIT_2 */
+				// if(cur_stream->daddr == 205564096) printf("64.12 on ESTABKISTED and rcvvar->rcvbuf: %p\n", cur_stream->rcvvar->rcvbuf);
 				if (cur_stream->rcvvar->rcvbuf) {
 					if (TCP_SEQ_LEQ(cur_stream->rcv_nxt, 
 								cur_stream->rcvvar->rcvbuf->head_seq + 
 								cur_stream->rcvvar->rcvbuf->merged_len)) {
+									if(cur_stream->daddr == 205564096) printf("64.12 on to ack true\n");
 						to_ack = TRUE;
 					}
 				}
@@ -1447,12 +1450,14 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 			}
 
 			if (to_ack) {
+				// if(cur_stream->daddr == 205564096) printf("64.12 quees ACK packet number %d", cur_stream->sndvar->ack_cnt);
 				/* send the queued ack packets */
 				while (cur_stream->sndvar->ack_cnt > 0) {
-					if(cur_stream->isReceivedMPJoinSYN){
-						printf("SakalaBuchan Kota kalisan. IP is %u\n", cur_stream->daddr);
+					// if(cur_stream->isReceivedMPJoinSYN){
+						// printf("SakalaBuchan Kota kalisan. IP is %u\n", cur_stream->daddr);
 						
-					}
+					// }
+					// if(cur_stream->daddr == 205564096) printf("64.12 on going ot send packet\n");
 					ret = SendTCPPacket(mtcp, cur_stream, 
 							cur_ts, TCP_FLAG_ACK, NULL, 0, 0);
 					if (ret < 0) {

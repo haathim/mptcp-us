@@ -64,7 +64,7 @@ IPOutputStandalone(struct mtcp_manager *mtcp, uint8_t protocol,
 	int rc = -1;
 	int j;
 
-	printf("IPOutputStandalone: daddr: %u, saddr: %u\n", daddr, saddr);
+	// printf("IPOutputStandalone: daddr: %u, saddr: %u\n", daddr, saddr);
 
 	nif = GetOutputInterface(daddr, saddr, &is_external);
 	if (nif < 0)
@@ -140,7 +140,7 @@ IPOutput(struct mtcp_manager *mtcp, tcp_stream *stream, uint16_t tcplen)
 	if (stream->sndvar->nif_out >= 0) {
 		nif = stream->sndvar->nif_out;
 	} else {
-		printf("IPOutput: stream->daddr: %u, stream->saddr: %u\n", stream->daddr, stream->saddr);
+		// printf("IPOutput: stream->daddr: %u, stream->saddr: %u\n", stream->daddr, stream->saddr);
 		nif = GetOutputInterface(stream->daddr, stream->saddr, &is_external);
 		stream->sndvar->nif_out = nif;
 		stream->is_external = is_external;
