@@ -12,6 +12,9 @@
 #include "ip_in.h"
 #include "clock.h"
 #include "mptcp.h"
+#include "config.h"
+#include "mtcp.h"
+
 #if USE_CCP
 #include "ccp.h"
 #endif
@@ -666,7 +669,7 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 			cur_stream->socket? cur_stream->socket->epoll & MTCP_EPOLLET : 0, 
 			cur_stream->socket? cur_stream->socket->epoll & MTCP_EPOLLIN : 0, 
 			cur_stream->socket? cur_stream->socket->epoll & MTCP_EPOLLOUT : 0);
-
+	
 	if (cur_stream->state == TCP_ST_ESTABLISHED) {
 		RaiseReadEvent(mtcp, cur_stream);
 	}
@@ -901,9 +904,6 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			cur_stream->state = TCP_ST_ESTABLISHED;
 			TRACE_STATE("Stream %d: TCP_ST_ESTABLISHED\n", cur_stream->id);
 
-			//TODO: Try to send MP_JOIN here (instead of at mtcp_write)
-			// Tried. Problem with passing mctx arg as it does not exist in the current function scope
-
 			if (cur_stream->socket) {
 				RaiseWriteEvent(mtcp, cur_stream);
 			} else {
@@ -1134,6 +1134,35 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	uint32_t dataAck = GetDataAck(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 	//printf("DATA_ACK recieved is: %u\n", dataAck);
 
+	//TODO: Try to send MP_JOIN here (instead of at mtcp_write)
+	// Tried. Problem with passing mctx arg as it does not exist in the current function scope
+
+	// *************************************************************************************
+	if(cur_stream->mptcp_cb != NULL){
+		mctx_t mctx = malloc(sizeof(struct mtcp_context));
+		int i = 0;
+		while(i < MAX_CPUS && g_mtcp[i] != mtcp) i++; //finding the mctx for the given mtcp_manager
+		mctx->cpu = i;
+		int new_subflow_sockid = mtcp_socket(mctx, AF_INET, SOCK_STREAM, 0);
+
+		struct sockaddr_in my_addr;
+		my_addr.sin_family = AF_INET;
+		char my_var[] = "192.168.61.12";
+		my_addr.sin_addr.s_addr = inet_addr(my_var);
+		my_addr.sin_port = cur_stream->dport;
+
+		mtcp_bind(mctx, new_subflow_sockid, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
+		
+		socket_map_t new_subflow_socket = &mtcp->smap[new_subflow_sockid];
+		struct sockaddr_in addr;
+		addr.sin_family = AF_INET;
+		char var[] = "192.168.63.12";
+		addr.sin_addr.s_addr = inet_addr(var);
+		addr.sin_port = cur_stream->dport;
+		int new_subflow_ret = mtcp_connect(mctx, new_subflow_sockid, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), cur_stream->mptcp_cb);
+	}
+	// *************************************************************************************
+	
 	if (tcph->fin) {
 		struct iphdr *iph = (struct iphdr *)((uint8_t *)tcph - sizeof(struct iphdr));
 		// print the iph->saddr in ip address format
