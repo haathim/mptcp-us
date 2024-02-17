@@ -605,7 +605,7 @@ ProcessACK(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts,
 static inline int 
 ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, 
 		uint32_t cur_ts, uint8_t *payload, uint32_t seq, int payloadlen)
-{
+{	
 	struct tcp_recv_vars *rcvvar = cur_stream->rcvvar;
 	uint32_t prev_rcv_nxt;
 	int ret;
@@ -1064,6 +1064,36 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 					MTCP_EVENT_QUEUE, listener->socket, MTCP_EPOLLIN);
 		}
 
+		// //TODO: Try to send MP_JOIN here (instead of at mtcp_write)
+		// // Tried. Problem with passing mctx arg as it does not exist in the current function scope
+
+		// // *************************************************************************************
+		// if(cur_stream->mptcp_cb != NULL){
+		// 	mctx_t mctx = (mctx_t) malloc(sizeof(struct mtcp_context));
+		// 	int i = 0;
+		// 	while(i < MAX_CPUS && g_mtcp[i] != mtcp) i++; //finding the mctx for the given mtcp_manager
+		// 	mctx->cpu = i;
+		// 	int new_subflow_sockid = mtcp_socket(mctx, AF_INET, SOCK_STREAM, 0);
+
+		// 	struct sockaddr_in my_addr;
+		// 	my_addr.sin_family = AF_INET;
+		// 	char my_var[] = "192.168.61.12";
+		// 	my_addr.sin_addr.s_addr = inet_addr(my_var);
+		// 	my_addr.sin_port = cur_stream->dport+1;
+
+		// 	mtcp_bind(mctx, new_subflow_sockid, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
+			
+		// 	socket_map_t new_subflow_socket = &mtcp->smap[new_subflow_sockid];
+		// 	struct sockaddr_in addr;
+		// 	addr.sin_family = AF_INET;
+		// 	char var[] = "192.168.63.12";
+		// 	addr.sin_addr.s_addr = inet_addr(var);
+		// 	addr.sin_port = cur_stream->dport;
+		// 	int new_subflow_ret = commence_mpjoin(mctx, new_subflow_sockid, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), cur_stream->mptcp_cb);
+		// }
+		// // *************************************************************************************
+
+
 	} else {
 		TRACE_DBG("Stream %d (TCP_ST_SYN_RCVD): No ACK.\n", 
 				cur_stream->id);
@@ -1106,20 +1136,28 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 	if (payloadlen > 0) {
 		//printf("Payload length is: %d\n", payloadlen);
-		if (ProcessTCPPayload(mtcp, cur_stream, 
-				cur_ts, payload, seq, payloadlen)) {
-			/* if return is TRUE, send ACK */
-			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+		if(cur_stream->mptcp_cb != NULL){
+			if (ProcessTCPPayload(mtcp, cur_stream->mptcp_cb->mpcb_stream, 
+					cur_ts, payload, dataSeq, payloadlen)) {
+				/* if return is TRUE, send ACK */
+				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+							
 
-			if (cur_stream->mptcp_cb != NULL)
-			{
-				CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
+			} else {
+				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
 			}
-			
-			
+		}
+		else{
 
-		} else {
-			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
+			if (ProcessTCPPayload(mtcp, cur_stream, 
+					cur_ts, payload, seq, payloadlen)) {
+				/* if return is TRUE, send ACK */
+				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+				
+
+			} else {
+				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
+			}
 		}
 	}
 
@@ -1133,35 +1171,6 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// TODO: In a similar way have to process DATA_ACK
 	uint32_t dataAck = GetDataAck(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 	//printf("DATA_ACK recieved is: %u\n", dataAck);
-
-	//TODO: Try to send MP_JOIN here (instead of at mtcp_write)
-	// Tried. Problem with passing mctx arg as it does not exist in the current function scope
-
-	// *************************************************************************************
-	if(cur_stream->mptcp_cb != NULL){
-		mctx_t mctx = malloc(sizeof(struct mtcp_context));
-		int i = 0;
-		while(i < MAX_CPUS && g_mtcp[i] != mtcp) i++; //finding the mctx for the given mtcp_manager
-		mctx->cpu = i;
-		int new_subflow_sockid = mtcp_socket(mctx, AF_INET, SOCK_STREAM, 0);
-
-		struct sockaddr_in my_addr;
-		my_addr.sin_family = AF_INET;
-		char my_var[] = "192.168.61.12";
-		my_addr.sin_addr.s_addr = inet_addr(my_var);
-		my_addr.sin_port = cur_stream->dport;
-
-		mtcp_bind(mctx, new_subflow_sockid, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
-		
-		socket_map_t new_subflow_socket = &mtcp->smap[new_subflow_sockid];
-		struct sockaddr_in addr;
-		addr.sin_family = AF_INET;
-		char var[] = "192.168.63.12";
-		addr.sin_addr.s_addr = inet_addr(var);
-		addr.sin_port = cur_stream->dport;
-		int new_subflow_ret = mtcp_connect(mctx, new_subflow_sockid, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), cur_stream->mptcp_cb);
-	}
-	// *************************************************************************************
 	
 	if (tcph->fin) {
 		struct iphdr *iph = (struct iphdr *)((uint8_t *)tcph - sizeof(struct iphdr));
@@ -1671,3 +1680,173 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 
 	SBUF_UNLOCK(&mpcb_rcvvar->read_lock);
 }
+
+int 
+commence_mpjoin(mctx_t mctx, int sockid, 
+		const struct sockaddr *addr, socklen_t addrlen, mptcp_cb *mptcp_cb)
+{
+	mtcp_manager_t mtcp;
+	socket_map_t socket;
+	tcp_stream *cur_stream;
+	struct sockaddr_in *addr_in;
+	in_addr_t dip;
+	in_port_t dport;
+	int is_dyn_bound = FALSE;
+	int ret, nif;
+
+	mtcp = GetMTCPManager(mctx);
+	if (!mtcp) {
+		return -1;
+	}
+
+	if (sockid < 0 || sockid >= CONFIG.max_concurrency) {
+		TRACE_API("Socket id %d out of range.\n", sockid);
+		errno = EBADF;
+		return -1;
+	}
+
+	if (mtcp->smap[sockid].socktype == MTCP_SOCK_UNUSED) {
+		TRACE_API("Invalid socket id: %d\n", sockid);
+		errno = EBADF;
+		return -1;
+	}
+	
+	if (mtcp->smap[sockid].socktype != MTCP_SOCK_STREAM) {
+		TRACE_API("Not an end socket. id: %d\n", sockid);
+		errno = ENOTSOCK;
+		return -1;
+	}
+
+	if (!addr) {
+		TRACE_API("Socket %d: empty address!\n", sockid);
+		errno = EFAULT;
+		return -1;
+	}
+	/* we only allow bind() for AF_INET address */
+	if (addr->sa_family != AF_INET || addrlen < sizeof(struct sockaddr_in)) {
+		TRACE_API("Socket %d: invalid argument!\n", sockid);
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	socket = &mtcp->smap[sockid];
+	if (socket->stream) {
+		TRACE_API("Socket %d: stream already exist!\n", sockid);
+		if (socket->stream->state >= TCP_ST_ESTABLISHED) {
+			errno = EISCONN;
+		} else {
+			errno = EALREADY;
+		}
+		return -1;
+	}
+	addr_in = (struct sockaddr_in *)addr;
+	dip = addr_in->sin_addr.s_addr;
+	dport = addr_in->sin_port;
+
+	/* address binding */
+	if ((socket->opts & MTCP_ADDR_BIND) && 
+	    socket->saddr.sin_port != INPORT_ANY &&
+	    socket->saddr.sin_addr.s_addr != INADDR_ANY) {
+		
+		int rss_core;
+		uint8_t endian_check = FetchEndianType();
+		
+		rss_core = GetRSSCPUCore(socket->saddr.sin_addr.s_addr, dip, 
+					 socket->saddr.sin_port, dport, num_queues, endian_check);
+		
+		if (rss_core != mctx->cpu) {
+			errno = EINVAL;
+			return -1;
+		}
+	} else {
+		//printf("else: mtcp connect\n");
+		if (mtcp->ap) {
+			ret = FetchAddressPerCore(mtcp->ap, 
+						  mctx->cpu, num_queues, addr_in, &socket->saddr);
+		} else {
+			uint8_t is_external;
+			nif = GetOutputInterface(dip, socket->saddr.sin_addr.s_addr, &is_external);
+			if (nif < 0) {
+				errno = EINVAL;
+				return -1;
+			}
+			ret = FetchAddress(ap[nif], 
+					   mctx->cpu, num_queues, addr_in, &socket->saddr);
+			UNUSED(is_external);
+		}
+		if (ret < 0) {
+			errno = EAGAIN;
+			return -1;
+		}
+		socket->opts |= MTCP_ADDR_BIND;
+		is_dyn_bound = TRUE;
+	}
+	cur_stream = CreateTCPStream(mtcp, socket, socket->socktype, 
+			socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, dip, dport);
+	
+	if (mptcp_cb)
+	{
+		cur_stream->isMPJOINStream = 1;
+		cur_stream->mptcp_cb = mptcp_cb;
+	}
+	
+	if (!cur_stream) {
+		TRACE_ERROR("Socket %d: failed to create tcp_stream!\n", sockid);
+		errno = ENOMEM;
+		return -1;
+	}
+	if (is_dyn_bound)
+		cur_stream->is_bound_addr = TRUE;
+	cur_stream->sndvar->cwnd = 1;
+	cur_stream->sndvar->ssthresh = cur_stream->sndvar->mss * 10;
+	cur_stream->state = TCP_ST_SYN_SENT;
+	TRACE_STATE("Stream %d: TCP_ST_SYN_SENT\n", cur_stream->id);
+	SQ_LOCK(&mtcp->ctx->connect_lock);
+	ret = StreamEnqueue(mtcp->connectq, cur_stream);
+	SQ_UNLOCK(&mtcp->ctx->connect_lock);
+	mtcp->wakeup_flag = TRUE;
+	if (ret < 0) {
+
+		TRACE_ERROR("Socket %d: failed to enqueue to conenct queue!\n", sockid);
+		SQ_LOCK(&mtcp->ctx->destroyq_lock);
+		StreamEnqueue(mtcp->destroyq, cur_stream);
+		SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+		errno = EAGAIN;
+		return -1;
+	}
+	/* if nonblocking socket, return EINPROGRESS */
+	if (socket->opts & MTCP_NONBLOCK) {
+
+		errno = EINPROGRESS;
+		return -1;
+
+	} else {
+
+		while (1) {
+			// This place looping indefintely
+			printf("&&&&  ");
+			if (!cur_stream) {
+				TRACE_ERROR("STREAM DESTROYED\n");
+				errno = ETIMEDOUT;
+				return -1;
+			}
+			if (cur_stream->state > TCP_ST_ESTABLISHED) {
+				TRACE_ERROR("Socket %d: weird state %s\n", 
+						sockid, TCPStateToString(cur_stream));
+				// TODO: how to handle this?
+				errno = ENOSYS;
+				return -1;
+			}
+
+			if (cur_stream->state == TCP_ST_ESTABLISHED) {
+				// add the mpcb here instead of the above place
+				if(mptcp_cb) cur_stream->mptcp_cb = mptcp_cb;
+				break;
+			}
+			usleep(1000);
+		}
+	}
+
+	return 0;
+}
+
