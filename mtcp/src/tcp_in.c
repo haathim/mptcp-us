@@ -1136,28 +1136,20 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 	if (payloadlen > 0) {
 		//printf("Payload length is: %d\n", payloadlen);
-		if(cur_stream->mptcp_cb != NULL){
-			if (ProcessTCPPayload(mtcp, cur_stream->mptcp_cb->mpcb_stream, 
-					cur_ts, payload, dataSeq, payloadlen)) {
-				/* if return is TRUE, send ACK */
-				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
-							
-
-			} else {
-				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
+		if (ProcessTCPPayload(mtcp, cur_stream, 
+				cur_ts, payload, seq, payloadlen)) {
+			/* if return is TRUE, send ACK */
+			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+			
+			if (cur_stream->mptcp_cb != NULL)
+			{
+				CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
 			}
-		}
-		else{
 
-			if (ProcessTCPPayload(mtcp, cur_stream, 
-					cur_ts, payload, seq, payloadlen)) {
-				/* if return is TRUE, send ACK */
-				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
-				
+		} else {
+			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
 
-			} else {
-				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
-			}
+
 		}
 	}
 
