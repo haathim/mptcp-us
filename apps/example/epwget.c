@@ -348,10 +348,13 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 			memcpy(wv->response + wv->resp_len, buf, copy_len);
 			wv->resp_len += copy_len;
 			wv->header_len = find_http_header(wv->response, wv->resp_len);
+			printf("wv->header_len: %u\n", wv->header_len);
 			if (wv->header_len > 0) {
 				wv->response[wv->header_len] = '\0';
 				wv->file_len = http_header_long_val(wv->response, 
 						CONTENT_LENGTH_HDR, sizeof(CONTENT_LENGTH_HDR) - 1);
+						printf("wv->file_len: %lu\n", wv->file_len);
+						
 				if (wv->file_len < 0) {
 					/* failed to find the Content-Length field */
 					wv->recv += rd;
@@ -403,13 +406,13 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 			}
 		}
 		
-		if (wv->header_len && (wv->recv >= wv->header_len + wv->file_len)) {
+		if (wv->header_len && (wv->recv >= wv->file_len)) {
 			break;
 		}
 	}
 
 	if (rd > 0) {
-		if (wv->header_len && (wv->recv >= wv->header_len + wv->file_len)) {
+		if (wv->header_len && (wv->recv >= wv->file_len)) {
 			TRACE_APP("Socket %d Done Write: "
 					"header: %u file: %lu recv: %lu write: %lu\n", 
 					sockid, wv->header_len, wv->file_len, 
@@ -423,7 +426,7 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 		/* connection closed by remote host */
 		TRACE_DBG("Socket %d connection closed with server.\n", sockid);
 
-		if (wv->header_len && (wv->recv >= wv->header_len + wv->file_len)) {
+		if (wv->header_len && (wv->recv >= wv->file_len)) {
 			DownloadComplete(ctx, sockid, wv);
 		} else {
 			ctx->stat.errors++;
