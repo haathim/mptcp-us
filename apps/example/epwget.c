@@ -341,54 +341,52 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 				wv->headerset, wv->header_len, wv->file_len);
 
 		pbuf = buf;
-// 		if (!wv->headerset) {
-// 			copy_len = MIN(rd, HTTP_HEADER_LEN - wv->resp_len);
-// 			memcpy(wv->response + wv->resp_len, buf, copy_len);
-// 			wv->resp_len += copy_len;
-// 			wv->header_len = find_http_header(wv->response, wv->resp_len);
-// 			if (wv->header_len > 0) {
-// 				wv->response[wv->header_len] = '\0';
-// 				wv->file_len = http_header_long_val(wv->response, 
-// 						CONTENT_LENGTH_HDR, sizeof(CONTENT_LENGTH_HDR) - 1);
-// 				if (wv->file_len < 0) {
-// 					/* failed to find the Content-Length field */
-// 					wv->recv += rd;
-// 					rd = 0;
-// 					CloseConnection(ctx, sockid);
-// 					return 0;
-// 				}
+		if (!wv->headerset) {
+			printf("rd: %d\n", rd);
+			copy_len = MIN(rd, HTTP_HEADER_LEN - wv->resp_len);
+			memcpy(wv->response + wv->resp_len, buf, copy_len);
+			wv->resp_len += copy_len;
+			wv->header_len = find_http_header(wv->response, wv->resp_len);
+			if (wv->header_len > 0) {
+				wv->response[wv->header_len] = '\0';
+				wv->file_len = http_header_long_val(wv->response, 
+						CONTENT_LENGTH_HDR, sizeof(CONTENT_LENGTH_HDR) - 1);
+						printf("File len: %lu, Header len: %u\n", wv->file_len, wv->header_len);
+				if (wv->file_len < 0) {
+					/* failed to find the Content-Length field */
+					wv->recv += rd;
+					rd = 0;
+					CloseConnection(ctx, sockid);
+					return 0;
+				}
 
-// 				TRACE_APP("Socket %d Parsed response header. "
-// 						"Header length: %u, File length: %lu (%luMB)\n", 
-// 						sockid, wv->header_len, 
-// 						wv->file_len, wv->file_len / 1024 / 1024);
-// 				wv->headerset = TRUE;
-// 				wv->recv += (rd - (wv->resp_len - wv->header_len));
-				
-// 				pbuf += (rd - (wv->resp_len - wv->header_len));
-// 				rd = (wv->resp_len - wv->header_len);
-// 				//printf("Successfully parse header.\n");
-// 				//fflush(stdout);
+				TRACE_APP("Socket %d Parsed response header. "
+						"Header length: %u, File length: %lu (%luMB)\n", 
+						sockid, wv->header_len, 
+						wv->file_len, wv->file_len / 1024 / 1024);
+				wv->headerset = TRUE;
 
-// 			} else {
-// 				/* failed to parse response header */
-// #if 0
-// 				printf("[CPU %d] Socket %d Failed to parse response header."
-// 						" Data: \n%s\n", ctx->core, sockid, wv->response);
-// 				fflush(stdout);
-// #endif
-// 				wv->recv += rd;
-// 				rd = 0;
-// 				ctx->stat.errors++;
-// 				ctx->errors++;
-// 				CloseConnection(ctx, sockid);
-// 				return 0;
-// 			}
-// 			//pbuf += wv->header_len;
-// 			//wv->recv += wv->header_len;
-// 			//rd -= wv->header_len;
-// 		}
-		wv->recv += rd;
+				pbuf += wv->header_len;
+
+				rd -= (int)wv->header_len;
+
+			} else {
+				/* failed to parse response header */
+#if 0
+				printf("[CPU %d] Socket %d Failed to parse response header."
+						" Data: \n%s\n", ctx->core, sockid, wv->response);
+				fflush(stdout);
+#endif
+				wv->recv += rd;
+				rd = 0;
+				ctx->stat.errors++;
+				ctx->errors++;
+				CloseConnection(ctx, sockid);
+				return 0;
+			}
+		}
+
+		wv->recv += (uint64_t)rd;
 		
 		if (fio && wv->fd > 0) {
 			int wr = 0;
