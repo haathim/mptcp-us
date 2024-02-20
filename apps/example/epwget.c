@@ -342,7 +342,6 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 
 		pbuf = buf;
 		if (!wv->headerset) {
-			printf("rd: %d\n", rd);
 			copy_len = MIN(rd, HTTP_HEADER_LEN - wv->resp_len);
 			memcpy(wv->response + wv->resp_len, buf, copy_len);
 			wv->resp_len += copy_len;
@@ -404,13 +403,13 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 			}
 		}
 		
-		if (wv->header_len && (wv->recv >= wv->header_len + wv->file_len)) {
+		if (wv->header_len && (wv->recv >= wv->file_len)) {
 			break;
 		}
 	}
 
 	if (rd > 0) {
-		if (wv->header_len && (wv->recv >= wv->header_len + wv->file_len)) {
+		if (wv->header_len && (wv->recv >= wv->file_len)) {
 			TRACE_APP("Socket %d Done Write: "
 					"header: %u file: %lu recv: %lu write: %lu\n", 
 					sockid, wv->header_len, wv->file_len, 
@@ -424,7 +423,7 @@ HandleReadEvent(thread_context_t ctx, int sockid, struct wget_vars *wv)
 		/* connection closed by remote host */
 		TRACE_DBG("Socket %d connection closed with server.\n", sockid);
 
-		if (wv->header_len && (wv->recv >= wv->header_len + wv->file_len)) {
+		if (wv->header_len && (wv->recv >= wv->file_len)) {
 			DownloadComplete(ctx, sockid, wv);
 		} else {
 			ctx->stat.errors++;
