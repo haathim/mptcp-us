@@ -259,7 +259,6 @@ SetRoutingTableFromFile()
 
 			// Can we do without number of default gws?
 			numOfDefGateways = GetIntValue(optstr + sizeof(ROUTES) + 2); //this is only correct of ints are one digit
-			// printf("numOfDefGateways: %d\n", numOfDefGateways);
 
 			for (i = 0; i < num; i++) {
 				if (fgets(optstr, MAX_OPTLINE_LEN, fc) == NULL)

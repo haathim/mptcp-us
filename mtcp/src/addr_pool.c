@@ -276,7 +276,6 @@ int
 FetchAddressPerCore(addr_pool_t ap, int core, int num_queues,
 		    const struct sockaddr_in *daddr, struct sockaddr_in *saddr)
 {
-	//printf("Hejjo\n");
 	struct addr_entry *walk;
 	int ret = -1;
 
@@ -284,11 +283,9 @@ FetchAddressPerCore(addr_pool_t ap, int core, int num_queues,
 		return -1;
 
 	pthread_mutex_lock(&ap->lock);
-	//printf("Jaajjji\n");
 	/* we don't need to calculate RSSCPUCore if mtcp_init_rss is called */
 	walk = TAILQ_FIRST(&ap->free_list);
 	if (walk) {
-		//printf("JUJUOU\n");
 		*saddr = walk->addr;
 		TAILQ_REMOVE(&ap->free_list, walk, addr_link);
 		TAILQ_INSERT_TAIL(&ap->used_list, walk, addr_link);
@@ -296,9 +293,7 @@ FetchAddressPerCore(addr_pool_t ap, int core, int num_queues,
 		ap->num_used++;
 		ret = 0;
 	}
-	//printf("haathimmunas\n");
 	pthread_mutex_unlock(&ap->lock);
-	//printf("sithum\n");
 	return ret;
 }
 /*----------------------------------------------------------------------------*/

@@ -772,10 +772,8 @@ Handle_TCP_ST_LISTEN (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// TODO:Check for MP_JOIN option
 	if (mptcp_option == MPTCP_OPTION_JOIN) {
 		
-		// printf("MP_JOIN option received\n");
 		uint32_t token = GetTokenFromMPJoinSYN(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 		uint32_t peerRandomNumber = GetPeerRandomNumberFromMPJoinSYN(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-		// printf("TOKEN is %u\n", token);
 		// Have to check if ok ot proceed
 		// check in the table if we have a mptcp connection for that token
 		cur_stream->isReceivedMPJoinSYN = 1;
@@ -869,7 +867,6 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 				
 				cur_stream->mptcp_cb->tcp_streams[0] = cur_stream;
 				cur_stream->mptcp_cb->peer_idsn = GetPeerIdsnFromKey(peerKey);
-				//printf("Peer IDSN: %u\n", cur_stream->mptcp_cb->peer_idsn);
 				cur_stream->mptcp_cb->mpcb_stream->rcvvar->irs = GetPeerIdsnFromKey(peerKey);
 				cur_stream->mptcp_cb->mpcb_stream->sndvar->iss = 1285339236;
 				cur_stream->mptcp_cb->my_idsn = 1285339236;
@@ -884,9 +881,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			if (cur_stream->isMPJOINStream)
 			{
 				truncatedHMAC = checkMP_JOIN_SYN_ACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-				// printf("Truncated HMAC: %lu\n", truncatedHMAC);
 				// TODO: Need to check if Server's response is correct
-
 				cur_stream->mptcp_cb->tcp_streams[cur_stream->mptcp_cb->num_streams++] = cur_stream;
 			}
 			
@@ -972,14 +967,10 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		TRACE_STATE("Stream %d: TCP_ST_ESTABLISHED\n", cur_stream->id);
 		// TODO: Here only need to make to Multipath TCP connection (but did i store the peer key that i sent?)
 		// check if keys are correct
-		// printf("Calling ParseMPTCPOptions 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\n");
 		mptcp_option = ParseMPTCPOptions(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-		// printf("In the middle of th night..... %u\n", mptcp_option);
 		peerKey = GetPeerKey(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 		// print mptcp option
-		// printf("MSYN_RCVD: PTCP Option: %u\n", mptcp_option);
 		if (mptcp_option == MPTCP_OPTION_CAPABLE && peerKey && cur_stream->mptcp_cb != NULL) {
-			// printf("NOT HURRAY 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n");
 			if(peerKey == cur_stream->mptcp_cb->peerKey){
 				myKey = GetMyKeyFromMPCapbleACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 				if(myKey == 16){
@@ -1017,10 +1008,8 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		}
 		else if (mptcp_option == (uint8_t)1)
 		{
-			// printf("HURRRRAYYY 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n");
 
 			if(cur_stream->mptcp_cb != NULL){
-				// printf("ESTABLISHED: MP_JOIN Stream\n");
 				// check if the HMAC is correct
 				// uint8_t isHMACCorrect = checkHMAC(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 				uint8_t isHMACCorrect = 1; //assume true for now
@@ -1028,18 +1017,13 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 				// if yes then check if the response is correct
 				// and then enqueue an ack becuase client is waiting for it
 				if (isHMACCorrect){
-					// printf("HMAC is correct#####################################################################################################\n");
-					// printf("Calling EnqueueACK\n");
 					EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
 					// AddtoControlList(mtcp, cur_stream, cur_ts);
-					// printf("Called EnqueueACK\n");
 				}
 			}
 		}
 		else{
-			// printf("WHAT'S HAPPENINH\n");
 			struct iphdr *iph = (struct iphdr *)((uint8_t *)tcph - sizeof(struct iphdr));
-			// printf("IP Header Source Address: %u\n", iph->saddr);
 		}
 		
 		/* update listening socket */
@@ -1124,7 +1108,6 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	if(cur_stream->mptcp_cb != NULL){
 		dataSeq = GetDataSeq(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 		if (dataSeq > 0){
-			// if(tcph->fin) printf("DATA_SEQ recieved is: %x\n", dataSeq);
 		}
 
 	}
@@ -1135,7 +1118,6 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// Just like senfing a normal data
 
 	if (payloadlen > 0) {
-		//printf("Payload length is: %d\n", payloadlen);
 		if (ProcessTCPPayload(mtcp, cur_stream, 
 				cur_ts, payload, seq, payloadlen)) {
 			/* if return is TRUE, send ACK */
@@ -1162,21 +1144,13 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 
 	// TODO: In a similar way have to process DATA_ACK
 	uint32_t dataAck = GetDataAck(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-	//printf("DATA_ACK recieved is: %u\n", dataAck);
 	
 	if (tcph->fin) {
-		struct iphdr *iph = (struct iphdr *)((uint8_t *)tcph - sizeof(struct iphdr));
-		// print the iph->saddr in ip address format
-		// printf("IP Header Source Address: %u\n", iph->saddr);
-		// printf("IP Header Destination Address: %u\n", iph->daddr);
-		// printf("IP Header Protocol: %u\n", iph->protocol);
-		// print the src ip in ip address format
-		// printf("Source IP: %s\n", inet_ntoa(*(struct in_addr *)&iph->saddr));
-		// printf("Recvd: FIN with SYN %u and ACK %u cur_stream->rcv_nxt %u\n", seq, ack_seq, cur_stream->rcv_nxt);
+		// struct iphdr *iph = (struct iphdr *)((uint8_t *)tcph - sizeof(struct iphdr));
+
 		/* process the FIN only if the sequence is valid */
 		/* FIN packet is allowed to push payload (should we check for PSH flag)? */
 		if (seq + payloadlen == cur_stream->rcv_nxt) {
-			// printf("Whassup ppayload len: %d\n", payloadlen);
 			cur_stream->state = TCP_ST_CLOSE_WAIT;
 			TRACE_STATE("Stream %d: TCP_ST_CLOSE_WAIT\n", cur_stream->id);
 			cur_stream->rcv_nxt++;
@@ -1633,9 +1607,7 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 	int ret;
 
 	/* allocate receive buffer if not exist */
-	// //printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	if (!mpcb_rcvvar->rcvbuf) {
-		// //printf("data_seq is: %u\n", data_seq);
 		mpcb_rcvvar->rcvbuf = RBInit(mtcp->rbm_rcv, mpcb_rcvvar->irs + 1);
 		if (!mpcb_rcvvar->rcvbuf) {
 			TRACE_ERROR("Stream %d: Failed to allocate receive buffer.\n", 
@@ -1647,7 +1619,6 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 			return ERROR;
 		}
 	}
-	// //printf("----------------------------------------------------------------------------------------------\n");
 
 	if (SBUF_LOCK(&mpcb_rcvvar->read_lock)) {
 		if (errno == EDEADLK)
@@ -1656,14 +1627,13 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 	}
 
 	mpcb_prev_rcv_nxt = mpcb_stream->rcv_nxt;
-	// //printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	//printf("data_seq is: %u\n", data_seq);
+
 	ret = RBPut(mtcp->rbm_rcv, 
 			mpcb_rcvvar->rcvbuf, subflow_rcvvar->rcvbuf->head, (uint32_t)copylen, data_seq);
 	if (ret < 0) {
 		TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
 	}
-	// //printf("----------------------------------------------------------------------------------------------\n");
+
 	RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, copylen, AT_APP);
 	subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
 
@@ -1751,7 +1721,6 @@ commence_mpjoin(mctx_t mctx, int sockid,
 			return -1;
 		}
 	} else {
-		//printf("else: mtcp connect\n");
 		if (mtcp->ap) {
 			ret = FetchAddressPerCore(mtcp->ap, 
 						  mctx->cpu, num_queues, addr_in, &socket->saddr);
@@ -1816,7 +1785,6 @@ commence_mpjoin(mctx_t mctx, int sockid,
 
 		while (1) {
 			// This place looping indefintely
-			printf("&&&&  ");
 			if (!cur_stream) {
 				TRACE_ERROR("STREAM DESTROYED\n");
 				errno = ETIMEDOUT;

@@ -67,72 +67,7 @@ CalculateOptionLength(uint8_t flags)
 static inline uint16_t
 CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payloadlen)
 {
-	// //printf("++++++++++++++++++++++\n");
 	uint16_t optlen = 0;
-
-// 	if (flags & TCP_FLAG_SYN) {
-// 		optlen += TCP_OPT_MSS_LEN;
-// #if TCP_OPT_SACK_ENABLED
-// 		optlen += TCP_OPT_SACK_PERMIT_LEN;
-// #if !TCP_OPT_TIMESTAMP_ENABLED
-// 		optlen += 2;  // insert NOP padding
-// #endif /* TCP_OPT_TIMESTAMP_ENABLED */
-// #endif /* TCP_OPT_SACK_ENABLED */
-
-// #if TCP_OPT_TIMESTAMP_ENABLED
-// 		optlen += TCP_OPT_TIMESTAMP_LEN;
-// #if !TCP_OPT_SACK_ENABLED
-// 		optlen += 2;  // insert NOP padding
-// #endif /* TCP_OPT_SACK_ENABLED */
-// #endif /* TCP_OPT_TIMESTAMP_ENABLED */
-
-// 		optlen += TCP_OPT_WSCALE_LEN + 1;
-
-// 		if (mptcp_option & MPTCP_OPTION_CAPABLE) {
-// 			// Add the length of the MP_CAPABLE option
-// 			optlen += MPTCP_OPT_CAPABLE_SYN_LEN;
-// 			// // If its a SYN/ACK
-// 			// if (flags & TCP_FLAG_ACK){
-// 			// 	optlen += 8;
-// 			// }
-// 		}
-
-// 		// if (mptcp_option & MPTCP_OPTION_JOIN) {
-// 		// 	// Add the length of the MP_JOIN option
-// 		// 	optlen += MPTCP_OPT_JOIN_SYN_LEN;
-// 		// 	// // If its a SYN/ACK
-// 		// 	// if (flags & TCP_FLAG_ACK){
-// 		// 	// 	optlen += 4;
-// 		// 	// }
-// 		// }
-
-// 	} else {
-
-// #if TCP_OPT_TIMESTAMP_ENABLED
-// 		optlen += TCP_OPT_TIMESTAMP_LEN + 2;
-// #endif
-
-// #if TCP_OPT_SACK_ENABLED
-// 		if (flags & TCP_FLAG_SACK) {
-// 			optlen += TCP_OPT_SACK_LEN + 2;
-// 		}
-// #endif
-// 		// If its a ACK
-// 		if(flags & TCP_FLAG_ACK){
-// 			if (mptcp_option & MPTCP_OPTION_CAPABLE) {
-// 				// Add the length of the MP_CAPABLE option
-// 				optlen += MPTCP_OPT_CAPABLE_ACK_LEN;
-// 			}
-
-// 			if (mptcp_option & MPTCP_OPTION_JOIN) {
-// 					// Add the length of the MP_JOIN option
-// 					optlen += MPTCP_OPT_JOIN_ACK_LEN;
-// 			}
-// 		}
-// 	}
-
-
-	// ----------------------------------------------------------------
 
 	if(flags == TCP_FLAG_SYN){
 
@@ -198,7 +133,6 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 	}
 	else if (flags == TCP_FLAG_ACK && payloadlen == 0 && mptcp_option != 2)
 	{
-		//printf("ACK with no payload\n");
 #if TCP_OPT_TIMESTAMP_ENABLED
 		optlen += TCP_OPT_TIMESTAMP_LEN + 2;
 #endif
@@ -217,14 +151,12 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 		}
 		else if(mptcp_option == MPTCP_OPTION_JOIN){
 			optlen += 24;
-			// printf("ACK MP_JOIN arrived\n");
 		}
 
 
 	}
 	else{
 		
-		//printf("ACK with payload\n");
 #if TCP_OPT_TIMESTAMP_ENABLED
 		optlen += TCP_OPT_TIMESTAMP_LEN + 2;
 #endif
@@ -235,7 +167,6 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 		}
 #endif
 		if(payloadlen > 0 || mptcp_option == 2){
-			//printf("Payload is present\n");
 			optlen += 20;
 		}
 	}
@@ -243,7 +174,6 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 
 
 	assert(optlen % 4 == 0);
-	// //printf("----------------------------\n");
 
 	return optlen;
 }
@@ -526,18 +456,6 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			
 			mp_join_hmac_generator(htobe64((uint64_t)(16)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
 
-			// print peerkey, myrandomnumber, peerRandomNumber
-			// printf("PeerKey: %lu\n", cur_stream->mptcp_cb->peerKey);
-			// printf("MyRandomNumber: %u\n", cur_stream->myRandomNumber);
-			// printf("PeerRandomNumber: %u\n", cur_stream->peerRandomNumber);
-
-			// //print the hash in hex
-			// printf("Hash: ");
-			// for(int j = 0; j < 20; j++){
-			// 	printf("%02x", hash[j]);
-			// }
-			// printf("\n");
-
 			for(int j = 0; j < 20; j++){
 				tcpopt[i++] = hash[j];
 			}
@@ -639,7 +557,6 @@ SendTCPPacketStandalone(struct mtcp_manager *mtcp,
 		uint8_t *payload, uint16_t payloadlen, 
 		uint32_t cur_ts, uint32_t echo_ts)
 {
-	//printf("SendTCPPacketStandalone is being used...\n");
 	struct tcphdr *tcph;
 	uint8_t *tcpopt;
 	uint32_t *ts;
@@ -734,7 +651,6 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	if (cur_stream->isMPJOINStream || cur_stream->isReceivedMPJoinSYN)
 	{
-		// printf("CHECKED MPJOIN SET AS OPTION\n");
 		mptcp_option = MPTCP_OPTION_JOIN;
 	}
 	
@@ -759,7 +675,6 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 		}
 	}
 	else if(isControlMsg){
-		// //printf("Control message\n");
 		// TODO: As the server, when sending SYN/ACK (ctrl msg) have to check if recevied syn before calling below fn (optionlength)
 		optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, 0);
 	}
@@ -768,7 +683,6 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 		optlen = CalculateOptionLengthMPTCP(flags, 2, payloadlen);
 	}
 	else{
-		// //printf("Normal packet\n");
 		optlen = CalculateOptionLength(flags);
 	}
 	
@@ -851,11 +765,6 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 	if (window32 == 0) {
 		cur_stream->need_wnd_adv = TRUE;
 	}
-
-
-
-	//printf("Sequence number: %u\n", tcph->seq);
-	//printf("Optlen: %d\n", optlen);
 
 	GenerateTCPOptions(cur_stream, cur_ts, flags, 
 			(uint8_t *)tcph + TCP_HEADER_LEN, optlen, isControlMsg, mptcp_option, payloadlen);
@@ -1417,7 +1326,6 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 		next = TAILQ_NEXT(cur_stream, sndvar->ack_link);
 
 		if (cur_stream->sndvar->on_ack_list) {
-			// if(cur_stream->daddr == 205564096) printf("64.12 on ACK list\n");
 			/* this list is only to ack the data packets */
 			/* if the ack is not data ack, then it will not process here */
 			to_ack = FALSE;
@@ -1428,12 +1336,10 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 					cur_stream->state == TCP_ST_TIME_WAIT) {
 				/* TIMEWAIT is possible since the ack is queued 
 				   at FIN_WAIT_2 */
-				// if(cur_stream->daddr == 205564096) printf("64.12 on ESTABKISTED and rcvvar->rcvbuf: %p\n", cur_stream->rcvvar->rcvbuf);
 				if (cur_stream->rcvvar->rcvbuf) {
 					if (TCP_SEQ_LEQ(cur_stream->rcv_nxt, 
 								cur_stream->rcvvar->rcvbuf->head_seq + 
 								cur_stream->rcvvar->rcvbuf->merged_len)) {
-									if(cur_stream->daddr == 205564096) printf("64.12 on to ack true\n");
 						to_ack = TRUE;
 					}
 				}
@@ -1450,14 +1356,9 @@ WriteTCPACKList(mtcp_manager_t mtcp,
 			}
 
 			if (to_ack) {
-				// if(cur_stream->daddr == 205564096) printf("64.12 quees ACK packet number %d", cur_stream->sndvar->ack_cnt);
 				/* send the queued ack packets */
 				while (cur_stream->sndvar->ack_cnt > 0) {
-					// if(cur_stream->isReceivedMPJoinSYN){
-						// printf("SakalaBuchan Kota kalisan. IP is %u\n", cur_stream->daddr);
-						
-					// }
-					// if(cur_stream->daddr == 205564096) printf("64.12 on going ot send packet\n");
+
 					ret = SendTCPPacket(mtcp, cur_stream, 
 							cur_ts, TCP_FLAG_ACK, NULL, 0, 0);
 					if (ret < 0) {

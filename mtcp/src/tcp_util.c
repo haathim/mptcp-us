@@ -65,7 +65,6 @@ uint8_t
 ParseMPTCPOptions(tcp_stream *cur_stream, 
 		uint32_t cur_ts, uint8_t *tcpopt, int len)
 {
-	// printf("ParseMPTCPOptions() => Arrived at the function\n");
 	int i;
 	unsigned int opt, optlen;
 	uint8_t subtypeAndVersion;
@@ -87,13 +86,10 @@ ParseMPTCPOptions(tcp_stream *cur_stream,
 
 			if (opt == TCP_OPT_MPTCP) {
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
-				// printf("ParseMPTCPOptions() => subtypeAndVersion: %u\n", subtypeAndVersion);
 				if(subtypeAndVersion == 0x00){
-					// printf("ParseMPTCPOptions() => MP_CAPABLE option present\n");
 					return (uint8_t)0;
 				}
 				if(subtypeAndVersion & 0x10){
-					// printf("ParseMPTCPOptions() => MP_JOIN option present\n");
 					return (uint8_t)1;
 				}
 				return 5;
@@ -105,7 +101,6 @@ ParseMPTCPOptions(tcp_stream *cur_stream,
 		}
 	}
 	//  No MPTCP options
-	// printf("ParseMPTCPOptions() => No MPTCP options\n");
 	return 5;
 }
 /*---------------------------------------------------------------------------*/
@@ -113,14 +108,11 @@ uint64_t
 GetPeerKey(tcp_stream *cur_stream, 
 		uint32_t cur_ts, uint8_t *tcpopt, int len)
 {	
-	// printf("GetPeerKey() => Arrived at the function\n");
 	int i;
 	unsigned int opt, optlen;
 	uint8_t subtypeAndVersion;
 	// uint32_t keyLow32,keyHigh32;
-	// printf("GetPeerKey() => Length of the tcpopt: %d\n", len);
 	for (i = 0; i < len; ) {
-		// printf("GetPeerKey() => Arrived at the for loop i is %d\n", i);
 		// why i++ here? Because after using the value only it will increment, so initially it will be,
 		// opt = *(tcpopt + 0) = *tcpopt
 		opt = *(tcpopt + i++);
@@ -140,13 +132,7 @@ GetPeerKey(tcp_stream *cur_stream,
 				// Check MP_CAPABLE and return Peer Key
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
 				if(subtypeAndVersion == 0x00){
-					// printf("GetPeerKey() => MP_CAPABLE option present\n");
-					// keyLow32 = (uint32_t)(*(uint64_t*)(tcpopt + (i + 2)) & 0xFFFFFFFF);
-					// keyHigh32 = (uint32_t)((*(uint64_t*)(tcpopt + (i + 2)) >> 32) & 0xFFFFFFFF);
-					// return ((uint64_t)ntohl(keyLow32)<<32) | ntohl(keyHigh32);
-					//printf("PeerKey in network: %lu\n", be64toh(*(uint64_t*)(tcpopt + (i + 2))));
 					return be64toh(*(uint64_t*)(tcpopt + (i + 2)));
-					// return ntohl(*(uint64_t*)(tcpopt + (i + 2)));
 				}
 				return 0;
 			}
@@ -157,7 +143,6 @@ GetPeerKey(tcp_stream *cur_stream,
 		}
 	}
 	//  No MPTCP options
-	// printf("GetPeerKey() => No MPTCP options\n");
 	return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -190,13 +175,7 @@ GetMyKeyFromMPCapbleACK(tcp_stream *cur_stream,
 				// Check MP_CAPABLE and return Peer Key
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
 				if(subtypeAndVersion == 0x00){
-
-					// keyLow32 = (uint32_t)(*(uint64_t*)(tcpopt + (i + 2)) & 0xFFFFFFFF);
-					// keyHigh32 = (uint32_t)((*(uint64_t*)(tcpopt + (i + 2)) >> 32) & 0xFFFFFFFF);
-					// return ((uint64_t)ntohl(keyLow32)<<32) | ntohl(keyHigh32);
-					//printf("PeerKey in network: %lu\n", be64toh(*(uint64_t*)(tcpopt + (i + 2))));
 					return be64toh(*(uint64_t*)(tcpopt + (i + 10)));
-					// return ntohl(*(uint64_t*)(tcpopt + (i + 2)));
 				}
 			}
 			else{
@@ -237,16 +216,9 @@ GetTokenFromMPJoinSYN(tcp_stream *cur_stream,
 
 			if (opt == TCP_OPT_MPTCP) {
 				// Check MP_CAPABLE and return Peer Key
-				// printf("Arrived at the MPTCP option\n");
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
 				if(subtypeAndVersion == 0x10){
-					// printf("Arrived at the MP_JOIN option\n");
-					// keyLow32 = (uint32_t)(*(uint64_t*)(tcpopt + (i + 2)) & 0xFFFFFFFF);
-					// keyHigh32 = (uint32_t)((*(uint64_t*)(tcpopt + (i + 2)) >> 32) & 0xFFFFFFFF);
-					// return ((uint64_t)ntohl(keyLow32)<<32) | ntohl(keyHigh32);
-					//printf("PeerKey in network: %lu\n", be64toh(*(uint64_t*)(tcpopt + (i + 2))));
 					return be32toh(*(uint32_t*)(tcpopt + (i + 2)));
-					// return ntohl(*(uint64_t*)(tcpopt + (i + 2)));
 				}
 			}
 			else{
@@ -288,12 +260,7 @@ GetPeerRandomNumberFromMPJoinSYN(tcp_stream *cur_stream,
 				// Check MP_CAPABLE and return Peer Key
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
 				if(subtypeAndVersion == 0x10){
-					// keyLow32 = (uint32_t)(*(uint64_t*)(tcpopt + (i + 2)) & 0xFFFFFFFF);
-					// keyHigh32 = (uint32_t)((*(uint64_t*)(tcpopt + (i + 2)) >> 32) & 0xFFFFFFFF);
-					// return ((uint64_t)ntohl(keyLow32)<<32) | ntohl(keyHigh32);
-					//printf("PeerKey in network: %lu\n", be64toh(*(uint64_t*)(tcpopt + (i + 2))));
 					return be32toh(*(uint32_t*)(tcpopt + (i + 6)));
-					// return ntohl(*(uint64_t*)(tcpopt + (i + 2)));
 				}
 			}
 			else{
@@ -608,8 +575,6 @@ GetToken(uint64_t key)
 
 	unsigned char hash[SHA_DIGEST_LENGTH];
 	token = sha1hashToken(htobe64(key), hash);
-	// printf("Key: %lu\n", key);
-	// printf("GetToken() => Token: %u\n", token);
 	return token;
 }
 
@@ -707,20 +672,16 @@ GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
 			}
 
 			if (opt == TCP_OPT_MPTCP) {
-				//printf("MPTCP option.......................................\n");
 				// Check MP_CAPABLE and return Peer Key
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
 				if(subtypeAndVersion == ((TCP_MPTCP_SUBTYPE_DSS << 4) | 0)){
-					//printf("DSS Option present\n");
 					dataSeqPresent = *(tcpopt + i + 1) & 0x04;
 					if (dataSeqPresent)
 					{
-						//printf("DATA_SEQ present\n");
 						dataSeq = be32toh(*((uint32_t*)(tcpopt + i + 6)));
 						return dataSeq;
 					}
 					else{
-						//printf("No DATA_SEQ present\n");
 						return 0;
 					}
 					
@@ -736,7 +697,6 @@ GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
 		}
 	}
 	//  No DSS
-	//printf("No DSS option\n");
 	return 0;
 }
 
@@ -767,30 +727,7 @@ void mp_join_hmac_generator(uint64_t key1, uint64_t key2, uint32_t num1, uint32_
 	memcpy(message, &num1, sizeof(num1));
     memcpy(message + sizeof(num1), &num2, sizeof(num2));
 
-	// // Calculate HMAC SHA-1 hash
-    // unsigned char hash[20];
-
-	// print the contents of key and message in hex
-	// printf("sizeof(key): %d\nKey: ", sizeof(key));
-	for (int i = 0; i < sizeof(key); i++) {
-		// printf("%02x", key[i]);
-	}
-	// printf("\n");
-
-	// printf("sizeof(message): %d\nMessage: ", sizeof(message));
-	for (int i = 0; i < sizeof(message); i++) {
-		// printf("%02x", message[i]);
-	}
-	// printf("\n");
-
     hmac_sha1(key, sizeof(key), message, sizeof(message), hash);
-
-	// // Print the hash
-    // printf("sizeof(hash): %d\nHMAC SHA-1 Hash: ", sizeof(hash));
-    // for (int i = 0; i < sizeof(hash); i++) {
-    //     printf("%02x", hash[i]);
-    // }
-    // printf("\n");
 
 }
 
@@ -822,7 +759,6 @@ uint64_t checkMP_JOIN_SYN_ACK(tcp_stream *cur_stream,
 				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
 				if(subtypeAndVersion == 0x10){
 					cur_stream->peerRandomNumber = be32toh(*(uint32_t*)(tcpopt + i + 10));
-					// printf("Peer Random Number: %u\n", cur_stream->peerRandomNumber);
 					return be64toh(*(uint64_t*)(tcpopt + (i + 2)));
 				}
 			}
