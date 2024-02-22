@@ -1129,7 +1129,7 @@ PeekForUser(mtcp_manager_t mtcp, tcp_stream *cur_stream, char *buf, int len)
 }
 /*----------------------------------------------------------------------------*/
 static inline int
-CopyToUser(mtcp_manager_t mtcp, tcp_stream *cur_stream, char *buf, int len)
+CopyToUser(mtcp_manager_t mtcp, tcp_stream *cur_stream, char *buf, int len, uint8_t is_mpcb_stream)
 {
 	struct tcp_recv_vars *rcvvar = cur_stream->rcvvar;
 	uint32_t prev_rcv_wnd;
@@ -1144,7 +1144,13 @@ CopyToUser(mtcp_manager_t mtcp, tcp_stream *cur_stream, char *buf, int len)
 	prev_rcv_wnd = rcvvar->rcv_wnd;
 	/* Copy data to user buffer and remove it from receiving buffer */
 	memcpy(buf, rcvvar->rcvbuf->head, copylen);
-	RBRemove(mtcp->rbm_rcv, rcvvar->rcvbuf, copylen, AT_APP);
+	if (is_mpcb_stream)
+	{
+		RBRemove(mtcp->mptcp_rbm_rcv, rcvvar->rcvbuf, copylen, AT_APP);	}
+	else
+	{
+		RBRemove(mtcp->rbm_rcv, rcvvar->rcvbuf, copylen, AT_APP);
+	}
 	rcvvar->rcv_wnd = rcvvar->rcvbuf->size - rcvvar->rcvbuf->merged_len;
 
 	/* Advertise newly freed receive buffer */
@@ -1255,7 +1261,7 @@ mtcp_recv(mctx_t mctx, int sockid, char *buf, size_t len, int flags)
 
 	switch (flags) {
 	case 0:
-		ret = CopyToUser(mtcp, cur_stream, buf, len);
+		ret = CopyToUser(mtcp, cur_stream, buf, len, (socket->stream->mptcp_cb != NULL) ? 1 : 0);
 		break;
 	case MSG_PEEK:
 		ret = PeekForUser(mtcp, cur_stream, buf, len);
@@ -1391,7 +1397,7 @@ mtcp_readv(mctx_t mctx, int sockid, const struct iovec *iov, int numIOV)
 		if (iov[i].iov_len <= 0)
 			continue;
 
-		ret = CopyToUser(mtcp, cur_stream, iov[i].iov_base, iov[i].iov_len);
+		ret = CopyToUser(mtcp, cur_stream, iov[i].iov_base, iov[i].iov_len,  (socket->stream->mptcp_cb != NULL) ? 1 : 0);
 		if (ret <= 0)
 			break;
 
