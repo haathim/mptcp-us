@@ -231,6 +231,10 @@ struct mtcp_manager
 	//mem_pool_t socket_pool;
 	sb_manager_t rbm_snd;
 	rb_manager_t rbm_rcv;
+
+	
+	rb_manager_t mptcp_rbm_rcv; /*rcvbuf manager for mptcp-level rcvbufs*/
+
 	struct hashtable *tcp_flow_table;
 #if USE_CCP
 	struct hashtable *tcp_sid_table;

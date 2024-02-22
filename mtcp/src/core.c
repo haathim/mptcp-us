@@ -990,9 +990,15 @@ InitializeMTCPManager(struct mtcp_thread_context* ctx)
 		return NULL;
 	}
 
-	mtcp->rbm_rcv = RBManagerCreate(mtcp, CONFIG.rcvbuf_size, CONFIG.max_num_buffers);
+	mtcp->rbm_rcv = RBManagerCreate(mtcp, CONFIG.rcvbuf_size, CONFIG.max_num_buffers, 0);
 	if (!mtcp->rbm_rcv) {
 		CTRACE_ERROR("Failed to create recv ring buffer.\n");
+		return NULL;
+	}
+
+	mtcp->mptcp_rbm_rcv = RBManagerCreate(mtcp, CONFIG.rcvbuf_size*3, CONFIG.max_num_buffers, 1);
+	if (!mtcp->mptcp_rbm_rcv) {
+		CTRACE_ERROR("Failed to create mptcp recv ring buffer.\n");
 		return NULL;
 	}
 
@@ -1650,6 +1656,7 @@ mtcp_destroy()
 #endif
 	/* wait until all threads are closed */
 	for (i = 0; i < num_cpus; i++) {
+		printf("In mtcp_destroy i: %d & num_cpus: %d\n", i, num_cpus);
 		if (running[i]) {
 #ifndef DISABLE_DPDK
 			if (master != i)
