@@ -166,8 +166,11 @@ CalculateOptionLengthMPTCP(uint8_t flags, uint8_t mptcp_option, uint16_t payload
 			optlen += TCP_OPT_SACK_LEN + 2;
 		}
 #endif
-		if(payloadlen > 0 || mptcp_option == 2){
+		if(payloadlen > 0 && mptcp_option == 2){ // DSN & Data ACK
 			optlen += 20;
+		}
+		else if(mptcp_option == 2){ // Data ACK onlu
+			optlen += 8;
 		}
 	}
 	
@@ -500,7 +503,8 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 	// Check if no SYN, because no SYN means data right?
 	// or just check payload length?
-	if(payloadlen > 0 || !isControlMsg){
+	// TODO: Need to check here if belonging to a MPTCP connection, else for normal also will send DSN
+	if(payloadlen > 0){
 		
 		// Add DSS option
 
@@ -539,14 +543,31 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 		i += 2;
 
+	}
+	else if (!isControlMsg || flags & TCP_FLAG_FIN){
+		if(flags & TCP_FLAG_FIN) printf("Generating DATA ACK for packet with FIN\n");
+		// Add DSS option
 
-		// Put some dummy values for the checksum
-		*((uint16_t*)(tcpopt + (i))) = htobe16(0x0000);
+		// Add MPTCP option Kind
+		tcpopt[i++] = TCP_OPT_MPTCP;
 
-		i += 2;
+		// Length = 18 (if using 4 octets for Data Sequence No) & No Checksum
+		tcpopt[i++] = 8;
+
+		// MPTCP DSS Subtype
+		tcpopt[i++] = ((TCP_MPTCP_SUBTYPE_DSS << 4) | 0);
+
+		// Flags (Data sequence and ACK present)
+		tcpopt[i++] = 0x01;
+
+		// Data ACK
+		*((uint32_t*)(tcpopt + (i))) = htobe32(cur_stream->mptcp_cb->mpcb_stream->rcv_nxt);
+
+		i += 4;
 
 
 	}
+	
 	assert (i == optlen);
 }
 /*----------------------------------------------------------------------------*/
@@ -674,7 +695,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 			optlen = CalculateOptionLength(flags);
 		}
 	}
-	else if(isControlMsg){
+	else if(isControlMsg && !(flags & TCP_FLAG_FIN)){
 		// TODO: As the server, when sending SYN/ACK (ctrl msg) have to check if recevied syn before calling below fn (optionlength)
 		optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, 0);
 	}
@@ -1104,6 +1125,7 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 					TCP_FLAG_FIN | TCP_FLAG_ACK, NULL, 0, 1);
 		}
 	} else if (cur_stream->state == TCP_ST_FIN_WAIT_1) {
+		printf("TCP_ST_FIN_WAIT_1\n");
 		/* if it is on ack_list, send it after sending ack */
 		if (sndvar->on_send_list || sndvar->on_ack_list) {
 			ret = -1;
