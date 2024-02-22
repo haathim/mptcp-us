@@ -1608,7 +1608,7 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 
 	/* allocate receive buffer if not exist */
 	if (!mpcb_rcvvar->rcvbuf) {
-		mpcb_rcvvar->rcvbuf = RBInit(mtcp->rbm_rcv, mpcb_rcvvar->irs + 1);
+		mpcb_rcvvar->rcvbuf = RBInit(mtcp->mptcp_rbm_rcv, mpcb_rcvvar->irs + 1);
 		if (!mpcb_rcvvar->rcvbuf) {
 			TRACE_ERROR("Stream %d: Failed to allocate receive buffer.\n", 
 					mpcb_stream->id);
@@ -1628,7 +1628,7 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 
 	mpcb_prev_rcv_nxt = mpcb_stream->rcv_nxt;
 
-	ret = RBPut(mtcp->rbm_rcv, 
+	ret = RBPut(mtcp->mptcp_rbm_rcv, 
 			mpcb_rcvvar->rcvbuf, subflow_rcvvar->rcvbuf->head, (uint32_t)copylen, data_seq);
 	if (ret < 0) {
 		TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
