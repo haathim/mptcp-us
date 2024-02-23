@@ -1525,37 +1525,6 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 	}
 
 	cur_stream = socket->stream;
-
-	// mp_join will be sent after the first write call
-	static int write_count = 0;
-
-	if(cur_stream->mptcp_cb != NULL){
-		write_count++;
-		if (write_count == 1)
-		{
-			// starting a mp_join
-			int new_subflow_sockid = mtcp_socket(mctx, AF_INET, SOCK_STREAM, 0);
-
-			struct sockaddr_in my_addr;
-			my_addr.sin_family = AF_INET;
-			char my_var[] = "192.168.61.12";
-			my_addr.sin_addr.s_addr = inet_addr(my_var);
-			my_addr.sin_port = cur_stream->dport;
-
-			mtcp_bind(mctx, new_subflow_sockid, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
-			
-			socket_map_t new_subflow_socket = &mtcp->smap[new_subflow_sockid];
-			struct sockaddr_in addr;
-			addr.sin_family = AF_INET;
-			char var[] = "192.168.63.12";
-			addr.sin_addr.s_addr = inet_addr(var);
-			addr.sin_port = cur_stream->dport;
-			
-			int new_subflow_ret = mtcp_connect(mctx, new_subflow_sockid, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), cur_stream->mptcp_cb);			
-			
-		}
-		
-	}
 	
 	/***********************SCHEDULER*******************************/
 	static i = 1;

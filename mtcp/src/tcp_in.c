@@ -875,6 +875,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 				cur_stream->mptcp_cb->mpcb_stream->rcv_nxt = cur_stream->mptcp_cb->peer_idsn + 1;
 				cur_stream->mptcp_cb->mpcb_stream->state = TCP_ST_ESTABLISHED;
 				cur_stream->mptcp_cb->num_streams = 1;
+				cur_stream->mptcp_cb->isSentMPJoinSYN = 0;
 			}
 		
 			// Need to check for the MP_JOIN option
@@ -1136,6 +1137,47 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	}
 
 	if (tcph->ack) {
+		// check if ACK is > 1 && should do only once
+		if(cur_stream->mptcp_cb != NULL  && cur_stream->mptcp_cb->isSentMPJoinSYN == 0){
+			// send MP_JOIN_SYN
+			
+
+			tcp_stream* new_mpjoin_stream = CreateTCPStream(mtcp, NULL, SOCK_STREAM, inet_addr("192.168.61.12"), cur_stream->sport, cur_stream->daddr, cur_stream->dport);
+			
+			if (!new_mpjoin_stream) {
+				TRACE_ERROR("Failed to create mpjoin tcp_stream!\n");
+				errno = ENOMEM;
+				return -1;
+			}
+
+			new_mpjoin_stream->isMPJOINStream = 1;
+			new_mpjoin_stream->mptcp_cb = cur_stream->mptcp_cb;
+
+			/*Dont know if below will work or is correct*/
+			new_mpjoin_stream->socket = cur_stream->socket;
+
+			new_mpjoin_stream->sndvar->cwnd = 1;
+			new_mpjoin_stream->sndvar->ssthresh = new_mpjoin_stream->sndvar->mss * 10;
+			new_mpjoin_stream->state = TCP_ST_SYN_SENT;
+			TRACE_STATE("Stream %d: TCP_ST_SYN_SENT\n", new_mpjoin_stream->id);
+			SQ_LOCK(&mtcp->ctx->connect_lock);
+			int ret = StreamEnqueue(mtcp->connectq, new_mpjoin_stream);
+			SQ_UNLOCK(&mtcp->ctx->connect_lock);
+			mtcp->wakeup_flag = TRUE;
+
+			if (ret < 0) {
+
+				TRACE_ERROR("mpjoin stream failed to enqueue to conenct queue!\n");
+				SQ_LOCK(&mtcp->ctx->destroyq_lock);
+				StreamEnqueue(mtcp->destroyq, new_mpjoin_stream);
+				SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+				errno = EAGAIN;
+				
+			}
+		
+			cur_stream->mptcp_cb->isSentMPJoinSYN = 1;
+		}
+
 		if (cur_stream->sndvar->sndbuf) {
 			ProcessACK(mtcp, cur_stream, cur_ts, 
 					tcph, seq, ack_seq, window, payloadlen);
