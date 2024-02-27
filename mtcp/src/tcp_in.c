@@ -762,8 +762,12 @@ Handle_TCP_ST_LISTEN (mtcp_manager_t mtcp, uint32_t cur_ts,
 		cur_stream->isReceivedMPCapableSYN = 1;
 		cur_stream->mptcp_cb = (mptcp_cb *)calloc(1, sizeof(mptcp_cb));
 		cur_stream->mptcp_cb->peerKey = peerKey;
-		cur_stream->mptcp_cb->myKey = 16;
-		uint32_t myToken = GetToken(16);
+		uint64_t random_number = 0;
+		for (int i = 0; i < 8; ++i) {
+			random_number = (random_number << 8) | (rand() & 0xFF);
+		}
+		cur_stream->mptcp_cb->myKey = random_number;
+		uint32_t myToken = GetToken(cur_stream->mptcp_cb->myKey);
 		mtcp->mptcp_conns.token[mtcp->mptcp_conns.num_connections] = myToken;
 		mtcp->mptcp_conns.mptcp_cbs[mtcp->mptcp_conns.num_connections++] = cur_stream->mptcp_cb;
 
@@ -857,7 +861,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			if(peerKey != 0){
 				cur_stream->peerKey = peerKey;
 				// Which means can that peer supports MPTCP
-				cur_stream->mptcp_cb = (mptcp_cb *)calloc(1, sizeof(mptcp_cb));
+				// cur_stream->mptcp_cb = (mptcp_cb *)calloc(1, sizeof(mptcp_cb));
 				// Have to initialize the tcp_stream of mpcb here
 				// and set the variables
 				socket_map_t socket;
@@ -868,8 +872,8 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 				cur_stream->mptcp_cb->tcp_streams[0] = cur_stream;
 				cur_stream->mptcp_cb->peer_idsn = GetPeerIdsnFromKey(peerKey);
 				cur_stream->mptcp_cb->mpcb_stream->rcvvar->irs = GetPeerIdsnFromKey(peerKey);
-				cur_stream->mptcp_cb->mpcb_stream->sndvar->iss = 1285339236;
-				cur_stream->mptcp_cb->my_idsn = 1285339236;
+				cur_stream->mptcp_cb->mpcb_stream->sndvar->iss = GetPeerIdsnFromKey(cur_stream->mptcp_cb->myKey);
+				cur_stream->mptcp_cb->my_idsn = GetPeerIdsnFromKey(cur_stream->mptcp_cb->myKey);
 				cur_stream->mptcp_cb->peerKey = peerKey;
 				cur_stream->mptcp_cb->mpcb_stream->snd_nxt = cur_stream->mptcp_cb->my_idsn + 1;
 				cur_stream->mptcp_cb->mpcb_stream->rcv_nxt = cur_stream->mptcp_cb->peer_idsn + 1;
@@ -974,7 +978,7 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 		if (mptcp_option == MPTCP_OPTION_CAPABLE && peerKey && cur_stream->mptcp_cb != NULL) {
 			if(peerKey == cur_stream->mptcp_cb->peerKey){
 				myKey = GetMyKeyFromMPCapbleACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-				if(myKey == 16){
+				if(myKey == cur_stream->mptcp_cb->myKey){
 					// socket_map_t socket;
 					// socket = cur_stream->socket; 
 					//Above is problem
@@ -994,8 +998,8 @@ Handle_TCP_ST_SYN_RCVD (mtcp_manager_t mtcp, uint32_t cur_ts,
 					cur_stream->mptcp_cb->tcp_streams[0] = cur_stream;
 					cur_stream->mptcp_cb->peer_idsn = GetPeerIdsnFromKey(peerKey);
 					cur_stream->mptcp_cb->mpcb_stream->rcvvar->irs = GetPeerIdsnFromKey(peerKey);
-					cur_stream->mptcp_cb->mpcb_stream->sndvar->iss = 1285339236;
-					cur_stream->mptcp_cb->my_idsn = 1285339236;
+					cur_stream->mptcp_cb->mpcb_stream->sndvar->iss = GetPeerIdsnFromKey(myKey);
+					cur_stream->mptcp_cb->my_idsn = GetPeerIdsnFromKey(myKey);
 					cur_stream->mptcp_cb->peerKey = peerKey;
 					cur_stream->mptcp_cb->mpcb_stream->snd_nxt = cur_stream->mptcp_cb->my_idsn + 1;
 					cur_stream->mptcp_cb->mpcb_stream->rcv_nxt = cur_stream->mptcp_cb->peer_idsn + 1;
@@ -1122,12 +1126,13 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 		if (ProcessTCPPayload(mtcp, cur_stream, 
 				cur_ts, payload, seq, payloadlen)) {
 			/* if return is TRUE, send ACK */
-			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
 			
 			if (cur_stream->mptcp_cb != NULL)
 			{
 				CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
 			}
+
+			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
 
 		} else {
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
@@ -1332,6 +1337,11 @@ Handle_TCP_ST_FIN_WAIT_1 (mtcp_manager_t mtcp, uint32_t cur_ts,
 		if (ProcessTCPPayload(mtcp, cur_stream, 
 				cur_ts, payload, seq, payloadlen)) {
 			/* if return is TRUE, send ACK */
+			if (cur_stream->mptcp_cb != NULL)
+			{
+				uint32_t dataSeq = GetDataSeq(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+				CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
+			}
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
 		} else {
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
@@ -1631,11 +1641,12 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 	uint32_t subflow_prev_rcv_wnd;
 	int copylen;
 
-	// copylen = MIN(subflow_rcvvar->rcvbuf->merged_len, len);
+	SBUF_LOCK(&subflow_rcvvar->read_lock);
 	copylen = subflow_rcvvar->rcvbuf->merged_len;
 	if (copylen <= 0) {
 		errno = EAGAIN;
 		return -1;
+		SBUF_UNLOCK(&subflow_rcvvar->read_lock);
 	}
 
 	subflow_prev_rcv_wnd = subflow_rcvvar->rcv_wnd;
@@ -1657,7 +1668,7 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 			mpcb_stream->state = TCP_ST_CLOSED;
 			mpcb_stream->close_reason = TCP_NO_MEM;
 			RaiseErrorEvent(mtcp, mpcb_stream);
-
+			SBUF_UNLOCK(&subflow_rcvvar->read_lock);
 			return ERROR;
 		}
 	}
@@ -1675,14 +1686,20 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 	if (ret < 0) {
 		TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
 	}
+	else{
+		RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, copylen, AT_APP);
+		subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
+	}
 
-	RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, copylen, AT_APP);
-	subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
+	/*Moved to inside else*/
+	// RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, copylen, AT_APP);
+	// subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
 
 	mpcb_stream->rcv_nxt = mpcb_rcvvar->rcvbuf->head_seq + mpcb_rcvvar->rcvbuf->merged_len;
 	mpcb_rcvvar->rcv_wnd = mpcb_rcvvar->rcvbuf->size - mpcb_rcvvar->rcvbuf->merged_len;
 
 	SBUF_UNLOCK(&mpcb_rcvvar->read_lock);
+	SBUF_UNLOCK(&subflow_rcvvar->read_lock);
 }
 
 int 

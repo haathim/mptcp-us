@@ -228,14 +228,30 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			tcpopt[i++] = 0x01;
 
 			// Add Sender's Key (64 bit)
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00; 
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x10; 
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00; 
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x10; 
+			
+			cur_stream->mptcp_cb = (mptcp_cb *)calloc(1, sizeof(mptcp_cb));
+			uint64_t random_number = 0;
+			for (int i = 0; i < 8; ++i) {
+				random_number = (random_number << 8) | (rand() & 0xFF);
+			}
+			cur_stream->mptcp_cb->myKey = random_number;
+
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 56;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 48;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 40;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 32; 
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 24;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 16;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 8;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey; 
 
 		}
 		else if(mptcp_option == MPTCP_OPTION_JOIN){
@@ -319,14 +335,23 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			tcpopt[i++] = 0x01;
 
 			// Add Sender's Key (64 bit)
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00; 
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x00;
-			tcpopt[i++] = 0x10; 
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00; 
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x00;
+			// tcpopt[i++] = 0x10;
+
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 56;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 48;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 40;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 32; 
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 24;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 16;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey >> 8;
+			tcpopt[i++] = cur_stream->mptcp_cb->myKey; 
 			
 		}
 		else if(mptcp_option == MPTCP_OPTION_JOIN){
@@ -345,7 +370,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		
 			// Truncated HMAC 64 bits
 			unsigned char hash[20];
-			mp_join_hmac_generator(htobe64((uint64_t)(16)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
+			mp_join_hmac_generator(htobe64((uint64_t)(cur_stream->mptcp_cb->myKey)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
 			for(int j = 0; j < 8; j++){
 				tcpopt[i++] = hash[j];
 			}
@@ -410,7 +435,8 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			tcpopt[i++] = 0x01;
 		
 			// Sender's 64 bit Key (changed endianness)
-			*((uint64_t*)(tcpopt + (i))) = 0x1000000000000000;
+			// *((uint64_t*)(tcpopt + (i))) = 0x1000000000000000;
+			*((uint64_t*)(tcpopt + (i))) = htobe64(cur_stream->mptcp_cb->myKey);
 
 			i += 8;
 
@@ -457,7 +483,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			// Sender's HMAC 160 bits
 			unsigned char hash[20];
 			
-			mp_join_hmac_generator(htobe64((uint64_t)(16)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
+			mp_join_hmac_generator(htobe64((uint64_t)(cur_stream->mptcp_cb->myKey)), htobe64(cur_stream->mptcp_cb->peerKey), htobe32(cur_stream->myRandomNumber), htobe32(cur_stream->peerRandomNumber), hash);
 
 			for(int j = 0; j < 20; j++){
 				tcpopt[i++] = hash[j];
