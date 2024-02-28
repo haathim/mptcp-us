@@ -677,6 +677,122 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	return TRUE;
 }
 /*----------------------------------------------------------------------------*/
+
+static inline int 
+ProcessMPTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts, uint8_t *payload, uint32_t seq, int payloadlen, uint32_t dataSeq)
+{
+	struct tcp_recv_vars *subflow_rcvvar = cur_stream->rcvvar;
+	struct tcp_recv_vars *mpcb_rcvvar = cur_stream->mptcp_cb->mpcb_stream->rcvvar;
+	uint32_t subflow_prev_rcv_nxt;
+	uint32_t mpcb_prev_rcv_nxt;
+	int ret;
+
+	/*SUBFLOW LEVEL CHECKS*/
+	/* if seq and segment length is lower than rcv_nxt, ignore and send ack */
+	if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
+		printf("ProcessMPTCPPayload: seq + payloadlen < cur_stream->rcv_nxt\n");
+		return FALSE;
+	}
+	/* if payload exceeds receiving buffer, drop and send ack */
+	if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + subflow_rcvvar->rcv_wnd)) {
+		printf("ProcessMPTCPPayload: seq + payloadlen > cur_stream->rcv_nxt + subflow_rcvvar->rcv_wnd\n");
+		return FALSE;
+	}
+
+	/*MPTCP CONNECTION LEVEL CHECKS*/
+	/* if seq and segment length is lower than rcv_nxt, ignore and send ack */
+	if (TCP_SEQ_LT(dataSeq + payloadlen, cur_stream->mptcp_cb->mpcb_stream->rcv_nxt)) {
+		printf("ProcessMPTCPPayload: dataSeq + payloadlen < cur_stream->mptcp_cb->mpcb_stream->rcv_nxt\n");
+		return FALSE;
+	}
+	/* if payload exceeds receiving buffer, drop and send ack */
+	if (TCP_SEQ_GT(dataSeq + payloadlen, cur_stream->mptcp_cb->mpcb_stream->rcv_nxt + mpcb_rcvvar->rcv_wnd)) {
+		printf("ProcessMPTCPPayload: dataSeq + payloadlen > cur_stream->mptcp_cb->mpcb_stream->rcv_nxt + mpcb_rcvvar->rcv_wnd\n");
+		return FALSE;
+	}
+
+	/*SUBFLOW*/
+	/* allocate receive buffer if not exist */
+	if (!subflow_rcvvar->rcvbuf) {
+		subflow_rcvvar->rcvbuf = RBInit(mtcp->rbm_rcv, subflow_rcvvar->irs + 1);
+		if (!subflow_rcvvar->rcvbuf) {
+			TRACE_ERROR("Stream %d: Failed to allocate receive buffer.\n", 
+					cur_stream->id);
+			cur_stream->state = TCP_ST_CLOSED;
+			cur_stream->close_reason = TCP_NO_MEM;
+			RaiseErrorEvent(mtcp, cur_stream);
+			printf("ProcessMPTCPPayload: Failed to allocate receive buffer\n");
+			return ERROR;
+		}
+	}
+
+	/*MPTCP CONNECTION*/
+	/* allocate receive buffer if not exist */
+	if (!mpcb_rcvvar->rcvbuf) {
+		mpcb_rcvvar->rcvbuf = RBInit(mtcp->rbm_rcv, mpcb_rcvvar->irs + 1);
+		if (!mpcb_rcvvar->rcvbuf) {
+			TRACE_ERROR("Stream %d: Failed to allocate receive buffer.\n", 
+					cur_stream->mptcp_cb->mpcb_stream->id);
+			cur_stream->mptcp_cb->mpcb_stream->state = TCP_ST_CLOSED;
+			cur_stream->mptcp_cb->mpcb_stream->close_reason = TCP_NO_MEM;
+			RaiseErrorEvent(mtcp, cur_stream->mptcp_cb->mpcb_stream);
+			printf("ProcessMPTCPPayload: Failed to allocate receive buffer 2\n");
+			return ERROR;
+		}
+	}
+
+	if (SBUF_LOCK(&subflow_rcvvar->read_lock)) {
+		if (errno == EDEADLK)
+			perror("ProcessTCPPayload: read_lock blocked\n");
+		assert(0);
+	}
+
+	if (SBUF_LOCK(&mpcb_rcvvar->read_lock)) {
+		if (errno == EDEADLK)
+			perror("ProcessTCPPayload: read_lock blocked\n");
+		assert(0);
+	}
+
+	/*SUBFLOW*/
+	subflow_prev_rcv_nxt = cur_stream->rcv_nxt;
+	mpcb_prev_rcv_nxt = cur_stream->mptcp_cb->mpcb_stream->rcv_nxt;
+
+	ret = RBPut(mtcp->mptcp_rbm_rcv, 
+			mpcb_rcvvar->rcvbuf, payload, (uint32_t)payloadlen, dataSeq);
+	
+	if (ret < 0) {
+		TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
+	}
+
+	/*TODO: Removing from buffer if FIN WAIT*/
+
+	/*SUBFLOW*/
+	// cur_stream->rcv_nxt = subflow_rcvvar->rcvbuf->head_seq + subflow_rcvvar->rcvbuf->merged_len;
+	cur_stream->rcv_nxt = seq + (uint32_t)payloadlen;
+	subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
+
+	/*MPTCP CONNECTION*/
+	cur_stream->mptcp_cb->mpcb_stream->rcv_nxt = mpcb_rcvvar->rcvbuf->head_seq + mpcb_rcvvar->rcvbuf->merged_len;
+	mpcb_rcvvar->rcv_wnd = mpcb_rcvvar->rcvbuf->size - mpcb_rcvvar->rcvbuf->merged_len;
+
+	SBUF_UNLOCK(&mpcb_rcvvar->read_lock);
+	SBUF_UNLOCK(&subflow_rcvvar->read_lock);
+
+	if (TCP_SEQ_LEQ(cur_stream->rcv_nxt, subflow_prev_rcv_nxt)) {
+		/* There are some lost packets */
+		printf("ProcessMPTCPPayload: TCP_SEQ_LEQ(cur_stream->rcv_nxt, subflow_prev_rcv_nxt)\n");
+		return FALSE;
+	}
+
+	if (cur_stream->state == TCP_ST_ESTABLISHED) {
+		RaiseReadEvent(mtcp, cur_stream);
+	}
+
+
+	return TRUE;
+}
+
+/*----------------------------------------------------------------------------*/
 static inline tcp_stream *
 CreateNewFlowHTEntry(mtcp_manager_t mtcp, uint32_t cur_ts, const struct iphdr *iph, 
 		int ip_len, const struct tcphdr* tcph, uint32_t seq, uint32_t ack_seq,
@@ -1123,22 +1239,53 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// Just like senfing a normal data
 
 	if (payloadlen > 0) {
+		/*FIRST TRY*/
+		// if (cur_stream->mptcp_cb != NULL)
+		// {
+		// 	/*This is a MPTCP connection*/
+		// 	if (ProcessMPTCPPayload(mtcp, cur_stream, 
+		// 		cur_ts, payload, seq, payloadlen, dataSeq)) {
+		// 		/* if return is TRUE, send ACK */
+		// 		printf("ACK 1\n");
+		// 		EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+
+		// 	} else {
+		// 		printf("ACK 2\n");
+		// 		EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
+
+		// 	}
+		// }
+		// else
+		// {
+		// 	/*Not a MPTCP Connection*/
+		// 	if (ProcessTCPPayload(mtcp, cur_stream, 
+		// 		cur_ts, payload, seq, payloadlen)) {
+		// 	/* if return is TRUE, send ACK */
+		// 		EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+
+		// 	} else {
+		// 		EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
+		// 	}
+		// }
+		/*END OF FIRST TRY*/
+
+		/*SECOND TRY*/
 		if (ProcessTCPPayload(mtcp, cur_stream, 
 				cur_ts, payload, seq, payloadlen)) {
 			/* if return is TRUE, send ACK */
-			
-			if (cur_stream->mptcp_cb != NULL)
-			{
-				CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
-			}
-
-			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
+				if (cur_stream->mptcp_cb != NULL)
+				{
+					CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, seq, payloadlen, dataSeq);
+				}
+				
+				EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
 
 		} else {
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
-
-
 		}
+		/*END OF SECOND TRY*/
+		
+		
 	}
 
 	if (tcph->ack) {
@@ -1337,11 +1484,11 @@ Handle_TCP_ST_FIN_WAIT_1 (mtcp_manager_t mtcp, uint32_t cur_ts,
 		if (ProcessTCPPayload(mtcp, cur_stream, 
 				cur_ts, payload, seq, payloadlen)) {
 			/* if return is TRUE, send ACK */
-			if (cur_stream->mptcp_cb != NULL)
-			{
-				uint32_t dataSeq = GetDataSeq(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-				CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
-			}
+			// if (cur_stream->mptcp_cb != NULL)
+			// {
+			// 	uint32_t dataSeq = GetDataSeq(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+			// 	CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, dataSeq);
+			// }
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_AGGREGATE);
 		} else {
 			EnqueueACK(mtcp, cur_stream, cur_ts, ACK_OPT_NOW);
@@ -1635,24 +1782,14 @@ ProcessTCPPacket(mtcp_manager_t mtcp,
 }
 
 
-int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stream *subflow_stream, uint32_t data_seq){
+int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stream *subflow_stream, uint32_t subflow_seq, int payloadlen, uint32_t data_seq){
 
 	struct tcp_recv_vars *subflow_rcvvar = subflow_stream->rcvvar;
 	uint32_t subflow_prev_rcv_wnd;
-	int copylen;
 
 	SBUF_LOCK(&subflow_rcvvar->read_lock);
-	copylen = subflow_rcvvar->rcvbuf->merged_len;
-	if (copylen <= 0) {
-		errno = EAGAIN;
-		return -1;
-		SBUF_UNLOCK(&subflow_rcvvar->read_lock);
-	}
 
 	subflow_prev_rcv_wnd = subflow_rcvvar->rcv_wnd;
-
-	/* Copy data to user buffer and remove it from receiving buffer */
-	//memcpy(buf, subflow_rcvvar->rcvbuf->head, copylen);
 
 	//copy into mpcb rcvbuf
 	struct tcp_recv_vars *mpcb_rcvvar = mpcb_stream->rcvvar;
@@ -1681,19 +1818,25 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 
 	mpcb_prev_rcv_nxt = mpcb_stream->rcv_nxt;
 
+	// find the location in the subflow buffer where the current seq packet is strored
+	int putx = subflow_seq - subflow_rcvvar->rcvbuf->head_seq;
+	// printf("Going to call RBPut in CopyFromSubflow\n");
+
+	// // print content of subflow buf
+	// printf("Subflow buffer content before RBPut\n");
+	// for(int i = 0; i < payloadlen; i++){
+	// 	printf("%c", subflow_rcvvar->rcvbuf->buf[i]);
+	// }
 	ret = RBPut(mtcp->mptcp_rbm_rcv, 
-			mpcb_rcvvar->rcvbuf, subflow_rcvvar->rcvbuf->head, (uint32_t)copylen, data_seq);
+			mpcb_rcvvar->rcvbuf, subflow_rcvvar->rcvbuf->head + putx, (uint32_t)payloadlen, data_seq);
 	if (ret < 0) {
 		TRACE_ERROR("Cannot merge payload. reason: %d\n", ret);
 	}
-	else{
-		RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, copylen, AT_APP);
-		subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
-	}
-
-	/*Moved to inside else*/
-	// RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, copylen, AT_APP);
-	// subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
+	
+	// printf("Going to call RBRemove in CopyFromSubflow\n");
+	int len = RBRemove(mtcp->rbm_rcv, subflow_rcvvar->rcvbuf, subflow_rcvvar->rcvbuf->merged_len, AT_APP);
+	// printf("length removed from subflow buffer = %d\n", len);
+	subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
 
 	mpcb_stream->rcv_nxt = mpcb_rcvvar->rcvbuf->head_seq + mpcb_rcvvar->rcvbuf->merged_len;
 	mpcb_rcvvar->rcv_wnd = mpcb_rcvvar->rcvbuf->size - mpcb_rcvvar->rcvbuf->merged_len;
