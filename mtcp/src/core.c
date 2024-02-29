@@ -555,6 +555,7 @@ HandleApplicationCalls(mtcp_manager_t mtcp, uint32_t cur_ts)
 				TRACE_STATE("Stream %d: TCP_ST_FIN_WAIT_1\n", stream->id);
 
 			} else if (stream->state == TCP_ST_CLOSE_WAIT) {
+				printf("Stream %p: TCP_ST_LAST_ACK (1)\n", stream);
 				stream->state = TCP_ST_LAST_ACK;
 				TRACE_STATE("Stream %d: TCP_ST_LAST_ACK\n", stream->id);
 			}
@@ -567,6 +568,7 @@ HandleApplicationCalls(mtcp_manager_t mtcp, uint32_t cur_ts)
 				TRACE_STATE("Stream %d: TCP_ST_FIN_WAIT_1\n", stream->id);
 
 			} else if (stream->state == TCP_ST_CLOSE_WAIT) {
+				printf("Stream %p: TCP_ST_LAST_ACK (2)\n", stream);
 				stream->state = TCP_ST_LAST_ACK;
 				TRACE_STATE("Stream %d: TCP_ST_LAST_ACK\n", stream->id);
 			}
@@ -996,7 +998,7 @@ InitializeMTCPManager(struct mtcp_thread_context* ctx)
 		return NULL;
 	}
 
-	mtcp->mptcp_rbm_rcv = RBManagerCreate(mtcp, CONFIG.rcvbuf_size*3, CONFIG.max_num_buffers, 1);
+	mtcp->mptcp_rbm_rcv = RBManagerCreate(mtcp, CONFIG.rcvbuf_size*8, CONFIG.max_num_buffers, 1);
 	if (!mtcp->mptcp_rbm_rcv) {
 		CTRACE_ERROR("Failed to create mptcp recv ring buffer.\n");
 		return NULL;

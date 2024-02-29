@@ -806,7 +806,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 	}
 
 	//TODO: This is where window value is set, need to set window of mpcb?
-	// if(cur_stream->mptcp_cb != NULL) window32 = cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcv_wnd >> wscale;
+	// if(cur_stream->mptcp_cb != NULL) window32 = cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcv_wnd;
 	// else window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
 	
 	window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
@@ -1141,11 +1141,12 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	} else if (cur_stream->state == TCP_ST_CLOSE_WAIT) {
 		/* Send ACK for the FIN here */
-		printf("TCP_ST_CLOSE_WAIT\n");
+		printf("TCP_ST_CLOSE_WAIT %p\n", cur_stream);
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
 
 	} else if (cur_stream->state == TCP_ST_LAST_ACK) {
 		/* if it is on ack_list, send it after sending ack */
+		printf("TCP_ST_LAST_ACK\n");
 		if (sndvar->on_send_list || sndvar->on_ack_list) {
 			ret = -1;
 		} else {
@@ -1173,10 +1174,11 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 		if (sndvar->is_fin_sent) {
 			/* if the sequence is for FIN, send FIN */
 			if (cur_stream->snd_nxt == sndvar->fss) {
+				printf("TCP_ST_CLOSING (1)%p\n", cur_stream);
 				ret = SendTCPPacket(mtcp, cur_stream, cur_ts, 
 						TCP_FLAG_FIN | TCP_FLAG_ACK, NULL, 0, 1);
 			} else {
-				printf("TCP_ST_CLOSING\n");
+				printf("TCP_ST_CLOSING (2)%p\n", cur_stream);
 				ret = SendTCPPacket(mtcp, cur_stream, cur_ts, 
 						TCP_FLAG_ACK, NULL, 0, 1);
 			}
@@ -1188,10 +1190,11 @@ SendControlPacket(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts)
 
 	} else if (cur_stream->state == TCP_ST_TIME_WAIT) {
 		/* Send ACK here */
-		printf("TCP_ST_TIME_WAIT\n");
+		printf("TCP_ST_TIME_WAIT %p\n", cur_stream);
 		ret = SendTCPPacket(mtcp, cur_stream, cur_ts, TCP_FLAG_ACK, NULL, 0, 1);
 
 	} else if (cur_stream->state == TCP_ST_CLOSED) {
+		printf("TCP_ST_CLOSED %p\n", cur_stream);
 		/* Send RST here */
 		TRACE_DBG("Stream %d: Try sending RST (TCP_ST_CLOSED)\n", 
 				cur_stream->id);

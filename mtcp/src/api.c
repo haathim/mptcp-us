@@ -879,6 +879,128 @@ CloseStreamSocket(mctx_t mctx, int sockid)
 		return -1;
 	}
 
+	if (cur_stream->mptcp_cb != NULL)
+	{
+		printf("No of streams = %d\n", cur_stream->mptcp_cb->num_streams);
+		for (int i = cur_stream->mptcp_cb->num_streams - 1; i >= 0; i--)
+		{
+			printf("Going to close the stream %d\n", i);
+			cur_stream = cur_stream->mptcp_cb->tcp_streams[i];
+
+			/*Below is similar what is done for the normal tcp_stream*/
+			if (cur_stream->closed) {
+				TRACE_API("Socket %d (Stream %u): already closed stream\n", 
+						sockid, cur_stream->id);
+				return 0;
+			}
+			cur_stream->closed = TRUE;
+				
+			TRACE_API("Stream %d: closing the stream.\n", cur_stream->id);
+
+			cur_stream->socket = NULL;
+
+			if (cur_stream->state == TCP_ST_CLOSED) {
+				TRACE_API("Stream %d at TCP_ST_CLOSED. destroying the stream.\n", 
+						cur_stream->id);
+				SQ_LOCK(&mtcp->ctx->destroyq_lock);
+				StreamEnqueue(mtcp->destroyq, cur_stream);
+				mtcp->wakeup_flag = TRUE;
+				SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+				return 0;
+
+			} else if (cur_stream->state == TCP_ST_SYN_SENT) {
+		#if 1
+				SQ_LOCK(&mtcp->ctx->destroyq_lock);
+				StreamEnqueue(mtcp->destroyq, cur_stream);
+				SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+				mtcp->wakeup_flag = TRUE;
+		#endif
+				return -1;
+
+			} else if (cur_stream->state != TCP_ST_ESTABLISHED && 
+					cur_stream->state != TCP_ST_CLOSE_WAIT) {
+				TRACE_API("Stream %d at state %s\n", 
+						cur_stream->id, TCPStateToString(cur_stream));
+				errno = EBADF;
+				return -1;
+			}
+			
+			SQ_LOCK(&mtcp->ctx->destroyq_lock);
+			cur_stream->sndvar->on_closeq = TRUE;
+			ret = StreamEnqueue(mtcp->closeq, cur_stream);
+			mtcp->wakeup_flag = TRUE;
+			SQ_UNLOCK(&mtcp->ctx->close_lock);
+
+			if (ret < 0) {
+				TRACE_ERROR("(NEVER HAPPEN) Failed to enqueue the stream to close.\n");
+				errno = EAGAIN;
+				return -1;
+			}
+
+			printf("Stream %d closed\n", i);
+
+		}
+
+		/*****CLOSE THE MPCB STREAM*****/
+	// 	printf("Going to close the mpcb\n");
+	// 	cur_stream = cur_stream->mptcp_cb->mpcb_stream;
+
+	// 	/*Below is similar what is done for the normal tcp_stream*/
+	// 	if (cur_stream->closed) {
+	// 		TRACE_API("Socket %d (Stream %u): already closed stream\n", 
+	// 				sockid, cur_stream->id);
+	// 		return 0;
+	// 	}
+	// 	cur_stream->closed = TRUE;
+			
+	// 	TRACE_API("Stream %d: closing the stream.\n", cur_stream->id);
+
+	// 	cur_stream->socket = NULL;
+
+	// 	if (cur_stream->state == TCP_ST_CLOSED) {
+	// 		TRACE_API("Stream %d at TCP_ST_CLOSED. destroying the stream.\n", 
+	// 				cur_stream->id);
+	// 		SQ_LOCK(&mtcp->ctx->destroyq_lock);
+	// 		StreamEnqueue(mtcp->destroyq, cur_stream);
+	// 		mtcp->wakeup_flag = TRUE;
+	// 		SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+	// 		return 0;
+
+	// 	} else if (cur_stream->state == TCP_ST_SYN_SENT) {
+	// #if 1
+	// 		SQ_LOCK(&mtcp->ctx->destroyq_lock);
+	// 		StreamEnqueue(mtcp->destroyq, cur_stream);
+	// 		SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+	// 		mtcp->wakeup_flag = TRUE;
+	// #endif
+	// 		return -1;
+
+	// 	} else if (cur_stream->state != TCP_ST_ESTABLISHED && 
+	// 			cur_stream->state != TCP_ST_CLOSE_WAIT) {
+	// 		TRACE_API("Stream %d at state %s\n", 
+	// 				cur_stream->id, TCPStateToString(cur_stream));
+	// 		errno = EBADF;
+	// 		return -1;
+	// 	}
+		
+	// 	SQ_LOCK(&mtcp->ctx->destroyq_lock);
+	// 	// cur_stream->sndvar->on_closeq = TRUE;
+	// 	ret = StreamEnqueue(mtcp->destroyq, cur_stream);
+	// 	mtcp->wakeup_flag = TRUE;
+	// 	SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
+
+	// 	if (ret < 0) {
+	// 		TRACE_ERROR("(NEVER HAPPEN) Failed to enqueue the stream to close.\n");
+	// 		errno = EAGAIN;
+	// 		return -1;
+	// 	}
+
+	// 	printf("MPCB Stream  closed\n");
+		/***END*/
+
+		return 0;
+	}
+	
 	if (cur_stream->closed) {
 		TRACE_API("Socket %d (Stream %u): already closed stream\n", 
 				sockid, cur_stream->id);
@@ -929,8 +1051,7 @@ CloseStreamSocket(mctx_t mctx, int sockid)
 	}
 
 	return 0;
-}
-/*----------------------------------------------------------------------------*/
+}/*----------------------------------------------------------------------------*/
 static inline int 
 CloseListeningSocket(mctx_t mctx, int sockid)
 {

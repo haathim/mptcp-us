@@ -700,6 +700,56 @@ GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
 	return 0;
 }
 
+uint32_t
+isDataFINPresent(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
+{
+	int i;
+	unsigned int opt, optlen;
+	uint8_t subtypeAndVersion;
+	uint32_t dataSeq;
+	uint8_t dataFINPresent = 0;
+
+	for (i = 0; i < len; ) {
+		// why i++ here? Because after using the value only it will increment, so initially it will be,
+		// opt = *(tcpopt + 0) = *tcpopt
+		opt = *(tcpopt + i++);
+		
+		if (opt == TCP_OPT_END) {	// end of option field
+			break;
+		} else if (opt == TCP_OPT_NOP) {	// no option
+			continue;
+		} else {
+
+			optlen = *(tcpopt + i++);
+			if (i + optlen - 2 > len) {
+				break;
+			}
+
+			if (opt == TCP_OPT_MPTCP) {
+				// Check MP_CAPABLE and return Peer Key
+				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
+				if(subtypeAndVersion == ((TCP_MPTCP_SUBTYPE_DSS << 4) | 0)){
+					dataFINPresent = *(tcpopt + i + 1) & 0x10;
+					return dataFINPresent > 0;
+					
+				}
+
+				// Move to next option
+				i += optlen - 2;
+			}
+			else{
+				// Move to next option
+				i += optlen - 2;
+			}
+		}
+	}
+	//  No DSS
+	return 0;
+}
+
+
+
+
 void hmac_sha1(const unsigned char *key, int key_len, const unsigned char *message, int message_len, unsigned char *digest) {
     
 	HMAC_CTX *ctx;

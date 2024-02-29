@@ -66,6 +66,7 @@ struct mptcp_cb{
     struct tcp_stream *mpcb_stream;
     uint8_t isSentMPJoinSYN; /*This should ideally be an array for each of the additional tcp_streams, here only for 2nd tcp_stream*/
     // why do I have to put struct in front of tcp_stream (else getting compiler error)
+    uint8_t isDataFINReceived; //TODO: initialize this to 0
     struct tcp_stream *tcp_streams[10];
     int num_streams;
 };
