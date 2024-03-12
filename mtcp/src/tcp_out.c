@@ -224,7 +224,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		
 			// Add Checksum required & HMAC-SHA1 (A, H set) -> 0x81
 			// Later i changed to no Checksum (Because DSS have to do later)
-			// TODO: (above)
+			// Haathim_TODO: (above)
 			tcpopt[i++] = 0x01;
 
 			// Add Sender's Key (64 bit)
@@ -415,7 +415,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 		tcpopt[i++] = cur_stream->sndvar->wscale_mine;
 		
 	}
-	// TODO: Check if can remove the payloadlen check
+	// Haathim_TODO: Check if can remove the payloadlen check
 	else if(flags == TCP_FLAG_ACK && payloadlen == 0 && isControlMsg){
 
 
@@ -441,7 +441,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 			i += 8;
 
 			// Reciver's 64 bit Key
-			// TODO: Have to check first if the key is already set
+			// Haathim_TODO: Have to check first if the key is already set
 			*((uint64_t*)(tcpopt + (i))) = htobe64(cur_stream->peerKey);
 
 			i += 8;
@@ -529,7 +529,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 	// Check if no SYN, because no SYN means data right?
 	// or just check payload length?
-	// TODO: Need to check here if belonging to a MPTCP connection, else for normal also will send DSN
+	// Haathim_TODO: Need to check here if belonging to a MPTCP connection, else for normal also will send DSN
 	if(payloadlen > 0){
 		
 		// Add DSS option
@@ -548,7 +548,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 		// Data ACK
 		*((uint32_t*)(tcpopt + (i))) = htobe32(cur_stream->mptcp_cb->mpcb_stream->rcv_nxt);
-
+		printf("Sending DATA-ACK: %u\n", cur_stream->mptcp_cb->mpcb_stream->rcv_nxt);
 		i += 4;
 
 		// Data Sequence Number
@@ -588,6 +588,7 @@ GenerateTCPOptions(tcp_stream *cur_stream, uint32_t cur_ts,
 
 		// Data ACK
 		*((uint32_t*)(tcpopt + (i))) = htobe32(cur_stream->mptcp_cb->mpcb_stream->rcv_nxt);
+		printf("Sending DATA-ACK: %u\n", cur_stream->mptcp_cb->mpcb_stream->rcv_nxt);
 
 		i += 4;
 
@@ -711,7 +712,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 
 	// If sending a SYN/ACK have to check if first SYN was with MP_CAPABLE OR NOT
 	// Can we use isControlMsg for that also? as in set isControlMsg to 0 if its is a normal SYN/ACK
-	// TODO: Cleanup
+	// Haathim_TODO: Cleanup
 	if(flags == (TCP_FLAG_SYN | TCP_FLAG_ACK)){
 		if(cur_stream->isReceivedMPCapableSYN){
 			optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, 0);
@@ -722,7 +723,7 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 		}
 	}
 	else if(isControlMsg && !(flags & TCP_FLAG_FIN)){
-		// TODO: As the server, when sending SYN/ACK (ctrl msg) have to check if recevied syn before calling below fn (optionlength)
+		// Haathim_TODO: As the server, when sending SYN/ACK (ctrl msg) have to check if recevied syn before calling below fn (optionlength)
 		optlen = CalculateOptionLengthMPTCP(flags, mptcp_option, 0);
 	}
 	else if(cur_stream->mptcp_cb != NULL){
@@ -805,11 +806,11 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 		wscale = cur_stream->sndvar->wscale_mine;
 	}
 
-	//TODO: This is where window value is set, need to set window of mpcb?
-	// if(cur_stream->mptcp_cb != NULL) window32 = cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcv_wnd;
+	//Haathim_TODO: This is where window value is set, need to set window of mpcb?
+	// if(cur_stream->mptcp_cb != NULL) window32 = cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcv_wnd >> wscale;
 	// else window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
-	
 	window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
+	printf("Advertised Window32: %d\n", window32 << wscale);
 	tcph->window = htons((uint16_t)MIN(window32, TCP_MAX_WINDOW));
 	/* if the advertised window is 0, we need to advertise again later */
 	if (window32 == 0) {

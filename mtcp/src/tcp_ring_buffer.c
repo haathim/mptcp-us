@@ -46,10 +46,10 @@ RBGetCurnum(rb_manager_t rbm)
 void 
 RBPrintInfo(struct tcp_ring_buffer* buff)
 {
-	printf("buff_data %p, buff_size %d, buff_mlen %d, "
-			"buff_clen %lu, buff_head %p (%d), buff_tail (%d)\n", 
-			buff->data, buff->size, buff->merged_len, buff->cum_len, 
-			buff->head, buff->head_offset, buff->tail_offset);
+	printf("buff_size %d, buff_mlen %d, "
+			"buff_clen %lu, buff_head_seq %lu, buff_head (%d), buff_tail (%d)\n", 
+			buff->size, buff->merged_len, buff->cum_len, buff->head_seq, 
+			buff->head_offset, buff->tail_offset);
 }
 /*----------------------------------------------------------------------------*/
 void 
@@ -288,6 +288,17 @@ int
 RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff, 
 	   void* data, uint32_t len, uint32_t cur_seq)
 {
+	if (buff->size == 65536)
+	{
+		printf("Before RBPut: DATA-SEQ: %u, ", cur_seq);
+		RBPrintInfo(buff);
+	}
+	else{
+		printf("Subflow: %p, Before RBPut: DATA-SEQ: %u, ", buff, cur_seq);
+		RBPrintInfo(buff);
+	}
+	
+	
 	int putx, end_off;
 	struct fragment_ctx *new_ctx;
 	struct fragment_ctx* iter;
@@ -302,6 +313,8 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 	putx = cur_seq - buff->head_seq;
 	end_off = putx + len;
 	if (buff->size < end_off) {
+		TRACE_ERROR("buffer overflow: buff->size %d, end_off %d, cur_seq %u, head_seq %u\n", 
+				buff->size, end_off, cur_seq, buff->head_seq);
 		return -2;
 	}
 	// if buffer is at tail, move the data to the first of head
@@ -380,6 +393,16 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 		buff->merged_len = buff->fctx->len;
 	}
 	
+	if (buff->size == 65536)
+	{
+		printf("After RBPut: added len: %d, putx: %d, ", len, putx);
+		RBPrintInfo(buff);
+	}
+	else{
+		printf("Subflow: %p, After RBPut: added len: %d, putx: %d, ", buff, len, putx);
+		RBPrintInfo(buff);
+	
+	}
 	return len;
 }
 /*----------------------------------------------------------------------------*/
@@ -387,12 +410,27 @@ size_t
 RBRemove(rb_manager_t rbm, struct tcp_ring_buffer* buff, size_t len, int option)
 {
 	/* this function should be called only in application thread */
-
+	if (buff->size == 65536)
+	{
+		printf("Before RBRemove: ");
+		RBPrintInfo(buff);
+	}
+	else{
+		printf("Subflow: %p, Before RBRemove: ", buff);
+		RBPrintInfo(buff);
+	
+	}
 	if (buff->merged_len < len) 
 		len = buff->merged_len;
 	
 	if (len == 0) 
 		return 0;
+	// I want to log details about the ring buffer before removing from it
+	if (buff->size == 65536)
+	{
+		printf("Removed len: %lu, \n", len);
+	}
+	// remove data from buffer
 
 	buff->head_offset += len;
 	buff->head = buff->data + buff->head_offset;
@@ -419,6 +457,15 @@ RBRemove(rb_manager_t rbm, struct tcp_ring_buffer* buff, size_t len, int option)
 		assert(0);
 	}
 
+	if (buff->size == 65536)
+	{
+		printf("After RBRemove: ");
+		RBPrintInfo(buff);
+	}
+	else{
+		printf("Subflow: %p, After RBRemove: ", buff);
+		RBPrintInfo(buff);
+	}
 	return len;
 }
 /*----------------------------------------------------------------------------*/

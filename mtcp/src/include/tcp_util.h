@@ -76,6 +76,9 @@ GetDataAck(tcp_stream *cur_stream, uint8_t *tcpopt, int len);
 uint32_t
 GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len);
 
+uint16_t
+GetDataLevelLength(tcp_stream *cur_stream, uint8_t *tcpopt, int len);
+
 void hmac_sha1(const unsigned char *key, int key_len, const unsigned char *message, int message_len, unsigned char *digest);
 
 void mp_join_hmac_generator(uint64_t key1, uint64_t key2, uint32_t num1, uint32_t num2, unsigned char* hash);

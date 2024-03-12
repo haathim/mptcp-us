@@ -700,6 +700,62 @@ GetDataSeq(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
 	return 0;
 }
 
+// Get DATA Level length
+uint16_t
+GetDataLevelLength(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
+{
+	int i;
+	unsigned int opt, optlen;
+	uint8_t subtypeAndVersion;
+	uint16_t dataLevelLength;
+	uint8_t dataSeqPresent = 0;
+
+	for (i = 0; i < len; ) {
+		// why i++ here? Because after using the value only it will increment, so initially it will be,
+		// opt = *(tcpopt + 0) = *tcpopt
+		opt = *(tcpopt + i++);
+		
+		if (opt == TCP_OPT_END) {	// end of option field
+			break;
+		} else if (opt == TCP_OPT_NOP) {	// no option
+			continue;
+		} else {
+
+			optlen = *(tcpopt + i++);
+			if (i + optlen - 2 > len) {
+				break;
+			}
+
+			if (opt == TCP_OPT_MPTCP) {
+				// Check MP_CAPABLE and return Peer Key
+				subtypeAndVersion = (uint8_t)(*(tcpopt + i));
+				if(subtypeAndVersion == ((TCP_MPTCP_SUBTYPE_DSS << 4) | 0)){
+					dataSeqPresent = *(tcpopt + i + 1) & 0x04;
+					if (dataSeqPresent)
+					{
+						dataLevelLength = be16toh(*((uint16_t*)(tcpopt + i + 14)));
+						return dataLevelLength;
+					}
+					else{
+						return 0;
+					}
+					
+				}
+
+				// Move to next option
+				i += optlen - 2;
+			}
+			else{
+				// Move to next option
+				i += optlen - 2;
+			}
+		}
+	}
+	//  No DSS
+	return 0;
+}
+
+
 uint32_t
 isDataFINPresent(tcp_stream *cur_stream, uint8_t *tcpopt, int len)
 {

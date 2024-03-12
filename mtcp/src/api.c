@@ -942,7 +942,7 @@ CloseStreamSocket(mctx_t mctx, int sockid)
 		}
 
 		/*****CLOSE THE MPCB STREAM*****/
-		/*TODO: Removing causes seg fault because when StreamHTRemove no stream in flowtable*/
+		/*Haathim_TODO: Removing causes seg fault because when StreamHTRemove no stream in flowtable*/
 	// 	printf("Going to close the mpcb\n");
 	// 	cur_stream = cur_stream->mptcp_cb->mpcb_stream;
 

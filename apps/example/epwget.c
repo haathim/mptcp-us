@@ -34,7 +34,7 @@
 #define IP_RANGE 1
 #define MAX_IP_STR_LEN 16
 
-#define BUF_SIZE (8*1024)
+#define BUF_SIZE (16*8192)
 
 #define CALC_MD5SUM FALSE
 

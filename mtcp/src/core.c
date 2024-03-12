@@ -480,8 +480,10 @@ FlushEpollEvents(mtcp_manager_t mtcp, uint32_t cur_ts)
 				ep->usr_queue->num_events, cur_ts, mtcp->ts_last_event);
 		mtcp->ts_last_event = cur_ts;
 		ep->stat.wakes++;
+		printf("Going to wake up user!\n");
 		pthread_cond_signal(&ep->epoll_cond);
 	}
+	else printf("Not going to wake up user!, ep->waiting: %d, ep->usr_queue->num_events: %d, ep->usr_shadow_queue->num_events: %d\n", ep->waiting, ep->usr_queue->num_events, ep->usr_shadow_queue->num_events);
 	pthread_mutex_unlock(&ep->epoll_lock);
 }
 /*----------------------------------------------------------------------------*/
@@ -838,9 +840,11 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 
 		if (mtcp->flow_cnt > 0) {
 			/* hadnle stream queues  */
+			// printf("CORE: HandleApplicationCalls\n");
 			HandleApplicationCalls(mtcp, ts);
 		}
 
+		// printf("CORE: WritePacketsToChunks\n");
 		WritePacketsToChunks(mtcp, ts);
 
 		/* send packets from write buffer */
@@ -862,6 +866,7 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 		mtcp->iom->select(ctx);
 
 		if (ctx->interrupt) {
+			// printf("CORE: InterruptApplication\n");
 			InterruptApplication(mtcp);
 		}
 	}
