@@ -47,7 +47,7 @@ void
 RBPrintInfo(struct tcp_ring_buffer* buff)
 {
 	printf("buff_size %d, buff_mlen %d, "
-			"buff_clen %lu, buff_head_seq %lu, buff_head (%d), buff_tail (%d)\n", 
+			"buff_clen %lu, buff_head_seq %u, buff_head (%d), buff_tail (%d)\n", 
 			buff->size, buff->merged_len, buff->cum_len, buff->head_seq, 
 			buff->head_offset, buff->tail_offset);
 }

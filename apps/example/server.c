@@ -110,7 +110,7 @@ int main() {
                 else if (events[i].events & MTCP_EPOLLIN){
                     // printf("GOT AN EPOLLIN! i = %d\n", i);
                     char request[100];
-                    int n = mtcp_read(mctx, events[i].data.sockid, request, 100);
+                    mtcp_read(mctx, events[i].data.sockid, request, 100);
                     printf("Request: %s\n", request);
                     // char *response = "Hello, client I am server (FROM EPOLLIN)!\n";
                     char response[100];

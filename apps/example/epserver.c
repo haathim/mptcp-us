@@ -101,21 +101,21 @@ static int nfiles;
 /*----------------------------------------------------------------------------*/
 static int finished;
 /*----------------------------------------------------------------------------*/
-static char *
-StatusCodeToString(int scode)
-{
-	switch (scode) {
-		case 200:
-			return "OK";
-			break;
+// static char *
+// StatusCodeToString(int scode)
+// {
+// 	switch (scode) {
+// 		case 200:	
+// 			return "OK";
+// 			break;
 
-		case 404:
-			return "Not Found";
-			break;
-	}
+// 		case 404:
+// 			return "Not Found";
+// 			break;
+// 	}
 
-	return NULL;
-}
+// 	return NULL;
+// }
 /*----------------------------------------------------------------------------*/
 void
 CleanServerVariable(struct server_vars *sv)
@@ -192,14 +192,14 @@ HandleReadEvent(struct thread_context *ctx, int sockid, struct server_vars *sv)
         // printf("Inside HandleReadEvent\n");
         struct mtcp_epoll_event ev;
         char buf[HTTP_HEADER_LEN];
-        char url[URL_LEN];
+        // char url[URL_LEN];
         char response[HTTP_HEADER_LEN];
-        int scode;                                              // status code
-        time_t t_now;
-        char t_str[128];
-        char keepalive_str[128];
+        // int scode;                                              // status code
+        // time_t t_now;
+        // char t_str[128];
+        // char keepalive_str[128];
         int rd;
-        int i;
+        // int i;
         int len;
         int sent;
 

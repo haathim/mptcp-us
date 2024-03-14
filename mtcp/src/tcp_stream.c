@@ -393,7 +393,7 @@ CreateMpcbTCPStream(mtcp_manager_t mtcp, socket_map_t socket, int type,
 		uint32_t saddr, uint16_t sport, uint32_t daddr, uint16_t dport)
 {
 	tcp_stream *stream = NULL;
-	int ret;
+	// int ret;
 
 	uint8_t is_external;
 	uint8_t *sa;
@@ -442,7 +442,7 @@ CreateMpcbTCPStream(mtcp_manager_t mtcp, socket_map_t socket, int type,
 	// }
 
 #if USE_CCP
-	ret = StreamHTInsert(mtcp->tcp_sid_table, stream);
+	int ret = StreamHTInsert(mtcp->tcp_sid_table, stream);
 	if (ret < 0) {
 		TRACE_ERROR("Stream %d: "
 				"Failed to insert the stream into SID lookup table.\n", stream->id);

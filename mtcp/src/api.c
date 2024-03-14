@@ -1649,7 +1649,7 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 	cur_stream = socket->stream;
 	
 	/***********************SCHEDULER*******************************/
-	static i = 1;
+	static int i = 1;
 	int a = 1;
 	
 	if (cur_stream->mptcp_cb != NULL){

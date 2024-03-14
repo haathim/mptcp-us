@@ -85,4 +85,7 @@ void mp_join_hmac_generator(uint64_t key1, uint64_t key2, uint32_t num1, uint32_
 
 uint64_t checkMP_JOIN_SYN_ACK(tcp_stream *cur_stream, uint32_t cur_ts, uint8_t *tcpopt, int len);
 
+uint32_t
+isDataFINPresent(tcp_stream *cur_stream, uint8_t *tcpopt, int len);
+
 #endif /* TCP_UTIL_H */	
