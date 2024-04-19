@@ -288,15 +288,15 @@ int
 RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff, 
 	   void* data, uint32_t len, uint32_t cur_seq)
 {
-	if (buff->size == 65536)
-	{
-		// printf("Before RBPut: DATA-SEQ: %u, ", cur_seq);
-		RBPrintInfo(buff);
-	}
-	else{
-		// printf("Subflow: %p, Before RBPut: DATA-SEQ: %u, ", buff, cur_seq);
-		RBPrintInfo(buff);
-	}
+	// if (buff->size == 65536)
+	// {
+	// 	// printf("Before RBPut: DATA-SEQ: %u, ", cur_seq);
+	// 	RBPrintInfo(buff);
+	// }
+	// else{
+	// 	// printf("Subflow: %p, Before RBPut: DATA-SEQ: %u, ", buff, cur_seq);
+	// 	RBPrintInfo(buff);
+	// }
 	
 	
 	int putx, end_off;
@@ -393,16 +393,16 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 		buff->merged_len = buff->fctx->len;
 	}
 	
-	if (buff->size == 65536)
-	{
-		// printf("After RBPut: added len: %d, putx: %d, ", len, putx);
-		RBPrintInfo(buff);
-	}
-	else{
-		// printf("Subflow: %p, After RBPut: added len: %d, putx: %d, ", buff, len, putx);
-		RBPrintInfo(buff);
+	// if (buff->size == 65536)
+	// {
+	// 	// printf("After RBPut: added len: %d, putx: %d, ", len, putx);
+	// 	RBPrintInfo(buff);
+	// }
+	// else{
+	// 	// printf("Subflow: %p, After RBPut: added len: %d, putx: %d, ", buff, len, putx);
+	// 	RBPrintInfo(buff);
 	
-	}
+	// }
 	return len;
 }
 /*----------------------------------------------------------------------------*/
@@ -410,16 +410,16 @@ size_t
 RBRemove(rb_manager_t rbm, struct tcp_ring_buffer* buff, size_t len, int option)
 {
 	/* this function should be called only in application thread */
-	if (buff->size == 65536)
-	{
-		// printf("Before RBRemove: ");
-		RBPrintInfo(buff);
-	}
-	else{
-		// printf("Subflow: %p, Before RBRemove: ", buff);
-		RBPrintInfo(buff);
+	// if (buff->size == 65536)
+	// {
+	// 	// printf("Before RBRemove: ");
+	// 	RBPrintInfo(buff);
+	// }
+	// else{
+	// 	// printf("Subflow: %p, Before RBRemove: ", buff);
+	// 	RBPrintInfo(buff);
 	
-	}
+	// }
 	if (buff->merged_len < len) 
 		len = buff->merged_len;
 	
@@ -457,15 +457,15 @@ RBRemove(rb_manager_t rbm, struct tcp_ring_buffer* buff, size_t len, int option)
 		assert(0);
 	}
 
-	if (buff->size == 65536)
-	{
-		// printf("After RBRemove: ");
-		RBPrintInfo(buff);
-	}
-	else{
-		// printf("Subflow: %p, After RBRemove: ", buff);
-		RBPrintInfo(buff);
-	}
+	// if (buff->size == 65536)
+	// {
+	// 	// printf("After RBRemove: ");
+	// 	RBPrintInfo(buff);
+	// }
+	// else{
+	// 	// printf("Subflow: %p, After RBRemove: ", buff);
+	// 	RBPrintInfo(buff);
+	// }
 	return len;
 }
 /*----------------------------------------------------------------------------*/
