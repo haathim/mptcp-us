@@ -529,11 +529,11 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 				i += 4;
 				ts_ref = *(uint32_t *)(tcpopt + i);
 				i += 4;
-				printf(", TSval: %u, TSref: %u", ts_val, ts_ref);
+				// printf(", TSval: %u, TSref: %u", ts_val, ts_ref);
 			} else if (opt == TCP_OPT_WSCALE) {
 				uint8_t wscale;
 				wscale = *(tcpopt + i++);
-				printf(", Wscale: %u", wscale);
+				// printf(", Wscale: %u", wscale);
 			} else {
 				// not handle
 				i += optlen - 2;

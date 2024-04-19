@@ -881,10 +881,10 @@ CloseStreamSocket(mctx_t mctx, int sockid)
 
 	if (cur_stream->mptcp_cb != NULL)
 	{
-		printf("No of streams = %d\n", cur_stream->mptcp_cb->num_streams);
+		// printf("No of streams = %d\n", cur_stream->mptcp_cb->num_streams);
 		for (int i = cur_stream->mptcp_cb->num_streams - 1; i >= 0; i--)
 		{
-			printf("Going to close the stream %d\n", i);
+			// printf("Going to close the stream %d\n", i);
 			cur_stream = cur_stream->mptcp_cb->tcp_streams[i];
 
 			/*Below is similar what is done for the normal tcp_stream*/
@@ -937,7 +937,7 @@ CloseStreamSocket(mctx_t mctx, int sockid)
 				return -1;
 			}
 
-			printf("Stream %d closed\n", i);
+			// printf("Stream %d closed\n", i);
 
 		}
 

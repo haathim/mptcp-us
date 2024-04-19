@@ -676,7 +676,7 @@ ProcessTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream,
 	
 	if (cur_stream->state == TCP_ST_ESTABLISHED) {
 		RaiseReadEvent(mtcp, cur_stream);
-		printf("ProcessTCPPayload: Raised Read Event\n");
+		// printf("ProcessTCPPayload: Raised Read Event\n");
 	}
 
 	return TRUE;
@@ -694,24 +694,24 @@ ProcessMPTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts
 	/*SUBFLOW LEVEL CHECKS*/
 	/* if seq and segment length is lower than rcv_nxt, ignore and send ack */
 	if (TCP_SEQ_LT(seq + payloadlen, cur_stream->rcv_nxt)) {
-		printf("ProcessMPTCPPayload: seq + payloadlen < cur_stream->rcv_nxt\n");
+		// printf("ProcessMPTCPPayload: seq + payloadlen < cur_stream->rcv_nxt\n");
 		return FALSE;
 	}
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(seq + payloadlen, cur_stream->rcv_nxt + subflow_rcvvar->rcv_wnd)) {
-		printf("ProcessMPTCPPayload: seq + payloadlen > cur_stream->rcv_nxt + subflow_rcvvar->rcv_wnd\n");
+		// printf("ProcessMPTCPPayload: seq + payloadlen > cur_stream->rcv_nxt + subflow_rcvvar->rcv_wnd\n");
 		return FALSE;
 	}
 
 	/*MPTCP CONNECTION LEVEL CHECKS*/
 	/* if seq and segment length is lower than rcv_nxt, ignore and send ack */
 	if (TCP_SEQ_LT(dataSeq + payloadlen, cur_stream->mptcp_cb->mpcb_stream->rcv_nxt)) {
-		printf("ProcessMPTCPPayload: dataSeq + payloadlen < cur_stream->mptcp_cb->mpcb_stream->rcv_nxt\n");
+		// printf("ProcessMPTCPPayload: dataSeq + payloadlen < cur_stream->mptcp_cb->mpcb_stream->rcv_nxt\n");
 		return FALSE;
 	}
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(dataSeq + payloadlen, cur_stream->mptcp_cb->mpcb_stream->rcv_nxt + mpcb_rcvvar->rcv_wnd)) {
-		printf("ProcessMPTCPPayload: dataSeq + payloadlen > cur_stream->mptcp_cb->mpcb_stream->rcv_nxt + mpcb_rcvvar->rcv_wnd\n");
+		// printf("ProcessMPTCPPayload: dataSeq + payloadlen > cur_stream->mptcp_cb->mpcb_stream->rcv_nxt + mpcb_rcvvar->rcv_wnd\n");
 		return FALSE;
 	}
 
@@ -725,7 +725,7 @@ ProcessMPTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts
 			cur_stream->state = TCP_ST_CLOSED;
 			cur_stream->close_reason = TCP_NO_MEM;
 			RaiseErrorEvent(mtcp, cur_stream);
-			printf("ProcessMPTCPPayload: Failed to allocate receive buffer\n");
+			// printf("ProcessMPTCPPayload: Failed to allocate receive buffer\n");
 			return ERROR;
 		}
 	}
@@ -740,7 +740,7 @@ ProcessMPTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts
 			cur_stream->mptcp_cb->mpcb_stream->state = TCP_ST_CLOSED;
 			cur_stream->mptcp_cb->mpcb_stream->close_reason = TCP_NO_MEM;
 			RaiseErrorEvent(mtcp, cur_stream->mptcp_cb->mpcb_stream);
-			printf("ProcessMPTCPPayload: Failed to allocate receive buffer 2\n");
+			// printf("ProcessMPTCPPayload: Failed to allocate receive buffer 2\n");
 			return ERROR;
 		}
 	}
@@ -783,7 +783,7 @@ ProcessMPTCPPayload(mtcp_manager_t mtcp, tcp_stream *cur_stream, uint32_t cur_ts
 
 	if (TCP_SEQ_LEQ(cur_stream->rcv_nxt, subflow_prev_rcv_nxt)) {
 		/* There are some lost packets */
-		printf("ProcessMPTCPPayload: TCP_SEQ_LEQ(cur_stream->rcv_nxt, subflow_prev_rcv_nxt)\n");
+		// printf("ProcessMPTCPPayload: TCP_SEQ_LEQ(cur_stream->rcv_nxt, subflow_prev_rcv_nxt)\n");
 		return FALSE;
 	}
 
@@ -1286,9 +1286,9 @@ Handle_TCP_ST_ESTABLISHED (mtcp_manager_t mtcp, uint32_t cur_ts,
 				{
 					dataSeq = GetDataSeq(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 					uint16_t dataLevelLength = GetDataLevelLength(cur_stream, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
-					printf("The data level length is %d\n", (int) dataLevelLength);
+					// printf("The data level length is %d\n", (int) dataLevelLength);
 					if(payloadlen == (int)dataLevelLength || cur_stream->mptcp_cb->isDataFINReceived == 1){CopyFromSubflowToMpcb(mtcp, cur_stream->mptcp_cb->mpcb_stream, cur_stream, seq, payloadlen, dataSeq);}
-					else printf("Mismatch: payloadlen: %d, dataLevelLength: %d\n", payloadlen, (int) dataLevelLength);
+					// else printf("Mismatch: payloadlen: %d, dataLevelLength: %d\n", payloadlen, (int) dataLevelLength);
 
 					// //enqueu ACK for both subflows
 					// for(int i = 0; i < cur_stream->mptcp_cb->num_streams; i++){
@@ -1391,7 +1391,7 @@ Handle_TCP_ST_CLOSE_WAIT (mtcp_manager_t mtcp, uint32_t cur_ts,
 		TRACE_DBG("Stream %d (TCP_ST_CLOSE_WAIT): "
 				"weird seq: %u, expected: %u\n", 
 				cur_stream->id, seq, cur_stream->rcv_nxt);
-		printf("Going to call ..........................\n");
+		// printf("Going to call ..........................\n");
 		AddtoControlList(mtcp, cur_stream, cur_ts);
 		return;
 	}
@@ -1828,12 +1828,12 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 
 	/* if seq and segment length is lower than rcv_nxt, ignore and send ack */
 	if (TCP_SEQ_LT(data_seq + payloadlen, mpcb_stream->rcv_nxt)) {
-		printf("Data seq is less than rcv_nxt, DATA-SEQ: %u, rcv_nxt: %u\n", data_seq, mpcb_stream->rcv_nxt);
+		// printf("Data seq is less than rcv_nxt, DATA-SEQ: %u, rcv_nxt: %u\n", data_seq, mpcb_stream->rcv_nxt);
 		return FALSE;
 	}
 	/* if payload exceeds receiving buffer, drop and send ack */
 	if (TCP_SEQ_GT(data_seq + payloadlen, mpcb_stream->rcv_nxt + mpcb_rcvvar->rcv_wnd)) {
-		printf("Data seq is greater than rcv_nxt + rcv_wnd, DATA-SEQ: %u, rcv_nxt: %u, rcv_wnd: %u\n", data_seq, mpcb_stream->rcv_nxt, mpcb_rcvvar->rcv_wnd);
+		// printf("Data seq is greater than rcv_nxt + rcv_wnd, DATA-SEQ: %u, rcv_nxt: %u, rcv_wnd: %u\n", data_seq, mpcb_stream->rcv_nxt, mpcb_rcvvar->rcv_wnd);
 		return FALSE;
 	}
 
@@ -1885,7 +1885,7 @@ int CopyFromSubflowToMpcb(mtcp_manager_t mtcp, tcp_stream *mpcb_stream, tcp_stre
 	subflow_rcvvar->rcv_wnd = subflow_rcvvar->rcvbuf->size - subflow_rcvvar->rcvbuf->merged_len;
 
 	mpcb_stream->rcv_nxt = mpcb_rcvvar->rcvbuf->head_seq + mpcb_rcvvar->rcvbuf->merged_len;
-	if(subflow_stream->mptcp_cb->isDataFINReceived == 1) {mpcb_stream->rcv_nxt++; printf("Recv DATA_FIN\n");}
+	if(subflow_stream->mptcp_cb->isDataFINReceived == 1) {mpcb_stream->rcv_nxt++; }
 	mpcb_rcvvar->rcv_wnd = mpcb_rcvvar->rcvbuf->size - mpcb_rcvvar->rcvbuf->merged_len;
 	ret  = mpcb_rcvvar->rcvbuf->merged_len;
 	SBUF_UNLOCK(&mpcb_rcvvar->read_lock);
