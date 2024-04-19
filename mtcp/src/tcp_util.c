@@ -524,15 +524,15 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 			} else if (opt == TCP_OPT_SACK_PERMIT) {
 				//printf(", SACK permit");
 			} else if (opt == TCP_OPT_TIMESTAMP) {
-				uint32_t ts_val, ts_ref;
-				ts_val = *(uint32_t *)(tcpopt + i);
+				// uint32_t ts_val, ts_ref;
+				// ts_val = *(uint32_t *)(tcpopt + i);
 				i += 4;
-				ts_ref = *(uint32_t *)(tcpopt + i);
+				// ts_ref = *(uint32_t *)(tcpopt + i);
 				i += 4;
 				// printf(", TSval: %u, TSref: %u", ts_val, ts_ref);
 			} else if (opt == TCP_OPT_WSCALE) {
-				uint8_t wscale;
-				wscale = *(tcpopt + i++);
+				// uint8_t wscale;
+				// wscale = *(tcpopt + i++);
 				// printf(", Wscale: %u", wscale);
 			} else {
 				// not handle
