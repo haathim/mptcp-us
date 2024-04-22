@@ -938,7 +938,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 	// tcp_stream *meta_sock; 
 	// int ret;
 	uint64_t peerKey;
-	// uint64_t truncatedHMAC;
+	uint64_t truncatedHMAC;
 
 	/* when active open */
 	if (tcph->ack) {
@@ -1004,7 +1004,7 @@ Handle_TCP_ST_SYN_SENT (mtcp_manager_t mtcp, uint32_t cur_ts,
 			// Need to check for the MP_JOIN option
 			if (cur_stream->isMPJOINStream)
 			{
-				// truncatedHMAC = checkMP_JOIN_SYN_ACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
+				truncatedHMAC = checkMP_JOIN_SYN_ACK(cur_stream, cur_ts, (uint8_t *)tcph + TCP_HEADER_LEN, (tcph->doff << 2) - TCP_HEADER_LEN);
 				// Haathim_TODO: Need to check if Server's response is correct
 				cur_stream->mptcp_cb->tcp_streams[cur_stream->mptcp_cb->num_streams++] = cur_stream;
 			}

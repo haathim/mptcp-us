@@ -807,9 +807,9 @@ SendTCPPacket(struct mtcp_manager *mtcp, tcp_stream *cur_stream,
 	}
 
 	//Haathim_TODO: This is where window value is set, need to set window of mpcb?
-	if(cur_stream->mptcp_cb != NULL) window32 = cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcv_wnd >> wscale;
-	else window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
-	// window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
+	// if(cur_stream->mptcp_cb != NULL) window32 = cur_stream->mptcp_cb->mpcb_stream->rcvvar->rcv_wnd >> wscale;
+	// else window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
+	window32 = cur_stream->rcvvar->rcv_wnd >> wscale;
 	// printf("Advertised Window32: %d\n", window32 << wscale);
 	tcph->window = htons((uint16_t)MIN(window32, TCP_MAX_WINDOW));
 	/* if the advertised window is 0, we need to advertise again later */
