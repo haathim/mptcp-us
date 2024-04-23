@@ -184,7 +184,6 @@ typedef struct tcp_stream
 	uint8_t need_wnd_adv;
 	int16_t on_rto_idx;
 
-	mptcp_tcp_sock *mptcp_sock;
 	mptcp_cb *mptcp_cb;
 	uint8_t isReceivedMPCapableSYN;
 	uint8_t isReceivedMPJoinSYN;

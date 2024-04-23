@@ -187,30 +187,7 @@ EnrollRouteTableEntry(char *optstr)
 	if (CONFIG.rtable[ridx].mask == 0) {
 		TRACE_CONFIG("Default Route GW set!\n");
 		CONFIG.gateway[CONFIG.gatewayCount++] = &CONFIG.rtable[ridx];
-	}
-
-	// By Haathim: I dont think below is correct
-	// int j;
-	// if (CONFIG.rtable[ridx].mask == 0) {
-		
-	// 	for ( j = 0; j < ETH_NUM; j++)
-	// 	{
-	// 		if (CONFIG.gateway[j]->saddr == CONFIG.rtable[ridx].saddr)
-	// 		{
-	// 			TRACE_CONFIG("Default Route GW set[%d]!\n", j);
-	// 			CONFIG.gateway[j] = &CONFIG.rtable[ridx];
-	// 			break;
-	// 		}
-			
-	// 	}
-		
-		
-	// }	
-
-	// if (CONFIG.rtable[ridx].mask == 0) {
-	// 	TRACE_CONFIG("Default Route GW set!\n");
-	// 	CONFIG.gateway = &CONFIG.rtable[ridx];
-	// }
+	}	
 }
 /*----------------------------------------------------------------------------*/
 int 
@@ -238,33 +215,27 @@ SetRoutingTableFromFile()
 		int num;
 		int numOfDefGateways;
   
-		// check if no more lines in route file
 		if (fgets(optstr, MAX_OPTLINE_LEN, fc) == NULL)
 			break;
 
 		//skip comment
 		iscomment = strchr(optstr, '#');
-		// first char of the line is '#', meaning it's a comment
 		if (iscomment == optstr)
 			continue;
 		if (iscomment != NULL)
 			*iscomment = 0;
 
-		// check if the string is equal to "ROUTE" i.e. an actual route entry
-		// (strncmp returns 0 if both equal)
 		if (!strncmp(optstr, ROUTES, sizeof(ROUTES) - 1)) {
 			num = GetIntValue(optstr + sizeof(ROUTES));
 			if (num <= 0)
 				break;
 
-			// Can we do without number of default gws?
 			numOfDefGateways = GetIntValue(optstr + sizeof(ROUTES) + 2); //this is only correct of ints are one digit
 
 			for (i = 0; i < num; i++) {
 				if (fgets(optstr, MAX_OPTLINE_LEN, fc) == NULL)
 					break;
 
-				// if it's a comment, skip it
 				if (*optstr == '#') {
 					i -= 1;
 					continue;
@@ -278,10 +249,7 @@ SetRoutingTableFromFile()
 					}
 				}
 				
-				// b4 it checks if the gateway entry is set
-				// but now have to check if at least one entry is not set
-				// but how to without knowing the number def gw entries there are?
-				// if the def dw is not set
+
 				if (!allGatewaysAreAdded)
 					EnrollRouteTableEntry(optstr);
 				else {
@@ -495,14 +463,6 @@ EnrollARPTableEntry(char *optstr)
 			break;
 		}
 	}
-
-	// if (CONFIG.gateway && ((CONFIG.gateway)->daddr &
-	// 			CONFIG.arp.entry[idx].ip_mask) ==
-	// 			CONFIG.arp.entry[idx].ip_masked) {
-	// 	CONFIG.arp.gateway = &CONFIG.arp.entry[idx];
-	// 	TRACE_CONFIG("ARP Gateway SET!\n");
-	// }
-
 
 /*
 	int i, cnt;

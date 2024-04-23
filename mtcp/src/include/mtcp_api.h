@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <netinet/in.h>
 #include <sys/uio.h>
-// #include "mptcp.h"
 
 #ifndef UNUSED
 #define UNUSED(x)	(void)x

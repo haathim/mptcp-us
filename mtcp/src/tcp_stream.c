@@ -224,18 +224,16 @@ tcp_stream *
 CreateTCPStream(mtcp_manager_t mtcp, socket_map_t socket, int type, 
 		uint32_t saddr, uint16_t sport, uint32_t daddr, uint16_t dport)
 {
-
 	tcp_stream *stream = NULL;
 	int ret;
 
 	uint8_t is_external;
 	uint8_t *sa;
 	uint8_t *da;
-	// some problem here
+	
 	pthread_mutex_lock(&mtcp->ctx->flow_pool_lock);
 
 	stream = (tcp_stream *)MPAllocateChunk(mtcp->flow_pool);
-
 	if (!stream) {
 		TRACE_ERROR("Cannot allocate memory for the stream. "
 				"CONFIG.max_concurrency: %d, concurrent: %u\n", 
@@ -246,7 +244,6 @@ CreateTCPStream(mtcp_manager_t mtcp, socket_map_t socket, int type,
 	memset(stream, 0, sizeof(tcp_stream));
 
 	stream->rcvvar = (struct tcp_recv_vars *)MPAllocateChunk(mtcp->rv_pool);
-
 	if (!stream->rcvvar) {
 		MPFreeChunk(mtcp->flow_pool, stream);
 		pthread_mutex_unlock(&mtcp->ctx->flow_pool_lock);

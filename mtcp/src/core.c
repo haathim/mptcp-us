@@ -480,10 +480,8 @@ FlushEpollEvents(mtcp_manager_t mtcp, uint32_t cur_ts)
 				ep->usr_queue->num_events, cur_ts, mtcp->ts_last_event);
 		mtcp->ts_last_event = cur_ts;
 		ep->stat.wakes++;
-		// printf("Going to wake up user!\n");
 		pthread_cond_signal(&ep->epoll_cond);
 	}
-	// else printf("Not going to wake up user!, ep->waiting: %d, ep->usr_queue->num_events: %d, ep->usr_shadow_queue->num_events: %d\n", ep->waiting, ep->usr_queue->num_events, ep->usr_shadow_queue->num_events);
 	pthread_mutex_unlock(&ep->epoll_lock);
 }
 /*----------------------------------------------------------------------------*/
@@ -557,7 +555,6 @@ HandleApplicationCalls(mtcp_manager_t mtcp, uint32_t cur_ts)
 				TRACE_STATE("Stream %d: TCP_ST_FIN_WAIT_1\n", stream->id);
 
 			} else if (stream->state == TCP_ST_CLOSE_WAIT) {
-				// printf("Stream %p: TCP_ST_LAST_ACK (1)\n", stream);
 				stream->state = TCP_ST_LAST_ACK;
 				TRACE_STATE("Stream %d: TCP_ST_LAST_ACK\n", stream->id);
 			}
@@ -570,7 +567,6 @@ HandleApplicationCalls(mtcp_manager_t mtcp, uint32_t cur_ts)
 				TRACE_STATE("Stream %d: TCP_ST_FIN_WAIT_1\n", stream->id);
 
 			} else if (stream->state == TCP_ST_CLOSE_WAIT) {
-				// printf("Stream %p: TCP_ST_LAST_ACK (2)\n", stream);
 				stream->state = TCP_ST_LAST_ACK;
 				TRACE_STATE("Stream %d: TCP_ST_LAST_ACK\n", stream->id);
 			}
@@ -840,11 +836,9 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 
 		if (mtcp->flow_cnt > 0) {
 			/* hadnle stream queues  */
-			// printf("CORE: HandleApplicationCalls\n");
 			HandleApplicationCalls(mtcp, ts);
 		}
 
-		// printf("CORE: WritePacketsToChunks\n");
 		WritePacketsToChunks(mtcp, ts);
 
 		/* send packets from write buffer */
@@ -866,7 +860,6 @@ RunMainLoop(struct mtcp_thread_context *ctx)
 		mtcp->iom->select(ctx);
 
 		if (ctx->interrupt) {
-			// printf("CORE: InterruptApplication\n");
 			InterruptApplication(mtcp);
 		}
 	}
@@ -1663,7 +1656,6 @@ mtcp_destroy()
 #endif
 	/* wait until all threads are closed */
 	for (i = 0; i < num_cpus; i++) {
-		// printf("In mtcp_destroy i: %d & num_cpus: %d\n", i, num_cpus);
 		if (running[i]) {
 #ifndef DISABLE_DPDK
 			if (master != i)

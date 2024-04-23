@@ -5,7 +5,6 @@
 #include "debug.h"
 
 /*----------------------------------------------------------------------------*/
-// Modified to include the source address as well (needed for multipath situations)
 inline int
 GetOutputInterface(uint32_t daddr, uint32_t saddr, uint8_t *is_external)
 {
@@ -83,7 +82,7 @@ IPOutputStandalone(struct mtcp_manager *mtcp, uint8_t protocol,
 		}
 		return NULL;
 	}
-
+	
 	iph = (struct iphdr *)EthernetOutput(mtcp, 
 			ETH_P_IP, nif, haddr, payloadlen + IP_HEADER_LEN);
 	if (!iph) {

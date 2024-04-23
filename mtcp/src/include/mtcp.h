@@ -22,7 +22,6 @@
 #include "logger.h"
 #include "stat.h"
 #include "io_module.h"
-// #include "mptcp.h"
 
 #ifdef ENABLE_ONVM
 #include "onvm_nflib.h"

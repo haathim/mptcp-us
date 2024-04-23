@@ -283,6 +283,7 @@ FetchAddressPerCore(addr_pool_t ap, int core, int num_queues,
 		return -1;
 
 	pthread_mutex_lock(&ap->lock);
+	
 	/* we don't need to calculate RSSCPUCore if mtcp_init_rss is called */
 	walk = TAILQ_FIRST(&ap->free_list);
 	if (walk) {
@@ -293,7 +294,9 @@ FetchAddressPerCore(addr_pool_t ap, int core, int num_queues,
 		ap->num_used++;
 		ret = 0;
 	}
+	
 	pthread_mutex_unlock(&ap->lock);
+	
 	return ret;
 }
 /*----------------------------------------------------------------------------*/

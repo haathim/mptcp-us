@@ -498,9 +498,9 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 	unsigned int opt, optlen;
 
 	for (i = 0; i < len; i++) {
-		//printf("%u ", tcpopt[i]);
+		printf("%u ", tcpopt[i]);
 	}
-	//printf("\n");
+	printf("\n");
 
 	for (i = 0; i < len; ) {
 		opt = *(tcpopt + i++);
@@ -513,32 +513,32 @@ PrintTCPOptions(uint8_t *tcpopt, int len)
 
 			optlen = *(tcpopt + i++);
 
-			//printf("Option: %d", opt);
-			//printf(", length: %d", optlen);
+			printf("Option: %d", opt);
+			printf(", length: %d", optlen);
 
 			if (opt == TCP_OPT_MSS) {
 				uint16_t mss;
 				mss = *(tcpopt + i++) << 8;
 				mss += *(tcpopt + i++);
-				//printf(", MSS: %u", mss);
+				printf(", MSS: %u", mss);
 			} else if (opt == TCP_OPT_SACK_PERMIT) {
-				//printf(", SACK permit");
+				printf(", SACK permit");
 			} else if (opt == TCP_OPT_TIMESTAMP) {
-				// uint32_t ts_val, ts_ref;
-				// ts_val = *(uint32_t *)(tcpopt + i);
+				uint32_t ts_val, ts_ref;
+				ts_val = *(uint32_t *)(tcpopt + i);
 				i += 4;
-				// ts_ref = *(uint32_t *)(tcpopt + i);
+				ts_ref = *(uint32_t *)(tcpopt + i);
 				i += 4;
-				// printf(", TSval: %u, TSref: %u", ts_val, ts_ref);
+				printf(", TSval: %u, TSref: %u", ts_val, ts_ref);
 			} else if (opt == TCP_OPT_WSCALE) {
-				// uint8_t wscale;
-				// wscale = *(tcpopt + i++);
-				// printf(", Wscale: %u", wscale);
+				uint8_t wscale;
+				wscale = *(tcpopt + i++);
+				printf(", Wscale: %u", wscale);
 			} else {
 				// not handle
 				i += optlen - 2;
 			}
-			//printf("\n");
+			printf("\n");
 		}
 	}
 }

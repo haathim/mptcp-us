@@ -288,17 +288,6 @@ int
 RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff, 
 	   void* data, uint32_t len, uint32_t cur_seq)
 {
-	// if (buff->size == 65536)
-	// {
-	// 	// printf("Before RBPut: DATA-SEQ: %u, ", cur_seq);
-	// 	RBPrintInfo(buff);
-	// }
-	// else{
-	// 	// printf("Subflow: %p, Before RBPut: DATA-SEQ: %u, ", buff, cur_seq);
-	// 	RBPrintInfo(buff);
-	// }
-	
-	
 	int putx, end_off;
 	struct fragment_ctx *new_ctx;
 	struct fragment_ctx* iter;
@@ -307,16 +296,17 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 
 	if (len <= 0)
 		return 0;
+
 	// if data offset is smaller than head sequence, then drop
 	if (GetMinSeq(buff->head_seq, cur_seq) != buff->head_seq)
 		return 0;
+
 	putx = cur_seq - buff->head_seq;
 	end_off = putx + len;
 	if (buff->size < end_off) {
-		TRACE_ERROR("buffer overflow: buff->size %d, end_off %d, cur_seq %u, head_seq %u\n", 
-				buff->size, end_off, cur_seq, buff->head_seq);
 		return -2;
 	}
+	
 	// if buffer is at tail, move the data to the first of head
 	if (buff->size <= (buff->head_offset + end_off)) {
 		memmove(buff->data, buff->head, buff->last_len);
@@ -334,6 +324,7 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 	if (buff->tail_offset < buff->head_offset + end_off) 
 		buff->tail_offset = buff->head_offset + end_off;
 	buff->last_len = buff->tail_offset - buff->head_offset;
+
 	// create fragmentation context blocks
 	new_ctx = AllocateFragmentContext(rbm);
 	if (!new_ctx) {
@@ -343,6 +334,7 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 	new_ctx->seq  = cur_seq;
 	new_ctx->len  = len;
 	new_ctx->next = NULL;
+
 	// traverse the fragment list, and merge the new fragment if possible
 	for (iter = buff->fctx, prev = NULL, pprev = NULL; 
 		iter != NULL;
@@ -393,16 +385,6 @@ RBPut(rb_manager_t rbm, struct tcp_ring_buffer* buff,
 		buff->merged_len = buff->fctx->len;
 	}
 	
-	// if (buff->size == 65536)
-	// {
-	// 	// printf("After RBPut: added len: %d, putx: %d, ", len, putx);
-	// 	RBPrintInfo(buff);
-	// }
-	// else{
-	// 	// printf("Subflow: %p, After RBPut: added len: %d, putx: %d, ", buff, len, putx);
-	// 	RBPrintInfo(buff);
-	
-	// }
 	return len;
 }
 /*----------------------------------------------------------------------------*/
@@ -410,27 +392,12 @@ size_t
 RBRemove(rb_manager_t rbm, struct tcp_ring_buffer* buff, size_t len, int option)
 {
 	/* this function should be called only in application thread */
-	// if (buff->size == 65536)
-	// {
-	// 	// printf("Before RBRemove: ");
-	// 	RBPrintInfo(buff);
-	// }
-	// else{
-	// 	// printf("Subflow: %p, Before RBRemove: ", buff);
-	// 	RBPrintInfo(buff);
-	
-	// }
+
 	if (buff->merged_len < len) 
 		len = buff->merged_len;
 	
 	if (len == 0) 
 		return 0;
-	// I want to log details about the ring buffer before removing from it
-	if (buff->size == 65536)
-	{
-		// printf("Removed len: %lu, \n", len);
-	}
-	// remove data from buffer
 
 	buff->head_offset += len;
 	buff->head = buff->data + buff->head_offset;
@@ -457,15 +424,6 @@ RBRemove(rb_manager_t rbm, struct tcp_ring_buffer* buff, size_t len, int option)
 		assert(0);
 	}
 
-	// if (buff->size == 65536)
-	// {
-	// 	// printf("After RBRemove: ");
-	// 	RBPrintInfo(buff);
-	// }
-	// else{
-	// 	// printf("Subflow: %p, After RBRemove: ", buff);
-	// 	RBPrintInfo(buff);
-	// }
 	return len;
 }
 /*----------------------------------------------------------------------------*/

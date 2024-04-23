@@ -621,7 +621,6 @@ mtcp_accept(mctx_t mctx, int sockid, struct sockaddr *addr, socklen_t *addrlen)
 		socket->saddr.sin_family = AF_INET;
 		socket->saddr.sin_port = accepted->dport;
 		socket->saddr.sin_addr.s_addr = accepted->daddr;
-
 	}
 
 	if (!(listener->socket->epoll & MTCP_EPOLLET) &&
@@ -733,6 +732,7 @@ mtcp_connect(mctx_t mctx, int sockid,
 		errno = EFAULT;
 		return -1;
 	}
+
 	/* we only allow bind() for AF_INET address */
 	if (addr->sa_family != AF_INET || addrlen < sizeof(struct sockaddr_in)) {
 		TRACE_API("Socket %d: invalid argument!\n", sockid);
@@ -750,6 +750,7 @@ mtcp_connect(mctx_t mctx, int sockid,
 		}
 		return -1;
 	}
+
 	addr_in = (struct sockaddr_in *)addr;
 	dip = addr_in->sin_addr.s_addr;
 	dport = addr_in->sin_port;
@@ -758,7 +759,6 @@ mtcp_connect(mctx_t mctx, int sockid,
 	if ((socket->opts & MTCP_ADDR_BIND) && 
 	    socket->saddr.sin_port != INPORT_ANY &&
 	    socket->saddr.sin_addr.s_addr != INADDR_ANY) {
-		
 		int rss_core;
 		uint8_t endian_check = FetchEndianType();
 		
@@ -791,6 +791,7 @@ mtcp_connect(mctx_t mctx, int sockid,
 		socket->opts |= MTCP_ADDR_BIND;
 		is_dyn_bound = TRUE;
 	}
+
 	cur_stream = CreateTCPStream(mtcp, socket, socket->socktype, 
 			socket->saddr.sin_addr.s_addr, socket->saddr.sin_port, dip, dport);
 	
@@ -805,18 +806,20 @@ mtcp_connect(mctx_t mctx, int sockid,
 		errno = ENOMEM;
 		return -1;
 	}
+
 	if (is_dyn_bound)
 		cur_stream->is_bound_addr = TRUE;
 	cur_stream->sndvar->cwnd = 1;
 	cur_stream->sndvar->ssthresh = cur_stream->sndvar->mss * 10;
+
 	cur_stream->state = TCP_ST_SYN_SENT;
 	TRACE_STATE("Stream %d: TCP_ST_SYN_SENT\n", cur_stream->id);
+
 	SQ_LOCK(&mtcp->ctx->connect_lock);
 	ret = StreamEnqueue(mtcp->connectq, cur_stream);
 	SQ_UNLOCK(&mtcp->ctx->connect_lock);
 	mtcp->wakeup_flag = TRUE;
 	if (ret < 0) {
-
 		TRACE_ERROR("Socket %d: failed to enqueue to conenct queue!\n", sockid);
 		SQ_LOCK(&mtcp->ctx->destroyq_lock);
 		StreamEnqueue(mtcp->destroyq, cur_stream);
@@ -824,16 +827,14 @@ mtcp_connect(mctx_t mctx, int sockid,
 		errno = EAGAIN;
 		return -1;
 	}
+
 	/* if nonblocking socket, return EINPROGRESS */
 	if (socket->opts & MTCP_NONBLOCK) {
-
 		errno = EINPROGRESS;
 		return -1;
 
 	} else {
-
 		while (1) {
-			// This place looping indefintely
 			if (!cur_stream) {
 				TRACE_ERROR("STREAM DESTROYED\n");
 				errno = ETIMEDOUT;
@@ -855,7 +856,6 @@ mtcp_connect(mctx_t mctx, int sockid,
 			usleep(1000);
 		}
 	}
-
 
 	return 0;
 }
@@ -936,68 +936,8 @@ CloseStreamSocket(mctx_t mctx, int sockid)
 				errno = EAGAIN;
 				return -1;
 			}
-
-			// printf("Stream %d closed\n", i);
-
 		}
 
-		/*****CLOSE THE MPCB STREAM*****/
-		/*Haathim_TODO: Removing causes seg fault because when StreamHTRemove no stream in flowtable*/
-	// 	printf("Going to close the mpcb\n");
-	// 	cur_stream = cur_stream->mptcp_cb->mpcb_stream;
-
-	// 	/*Below is similar what is done for the normal tcp_stream*/
-	// 	if (cur_stream->closed) {
-	// 		TRACE_API("Socket %d (Stream %u): already closed stream\n", 
-	// 				sockid, cur_stream->id);
-	// 		return 0;
-	// 	}
-	// 	cur_stream->closed = TRUE;
-			
-	// 	TRACE_API("Stream %d: closing the stream.\n", cur_stream->id);
-
-	// 	cur_stream->socket = NULL;
-
-	// 	if (cur_stream->state == TCP_ST_CLOSED) {
-	// 		TRACE_API("Stream %d at TCP_ST_CLOSED. destroying the stream.\n", 
-	// 				cur_stream->id);
-	// 		SQ_LOCK(&mtcp->ctx->destroyq_lock);
-	// 		StreamEnqueue(mtcp->destroyq, cur_stream);
-	// 		mtcp->wakeup_flag = TRUE;
-	// 		SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
-	// 		return 0;
-
-	// 	} else if (cur_stream->state == TCP_ST_SYN_SENT) {
-	// #if 1
-	// 		SQ_LOCK(&mtcp->ctx->destroyq_lock);
-	// 		StreamEnqueue(mtcp->destroyq, cur_stream);
-	// 		SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
-	// 		mtcp->wakeup_flag = TRUE;
-	// #endif
-	// 		return -1;
-
-	// 	} else if (cur_stream->state != TCP_ST_ESTABLISHED && 
-	// 			cur_stream->state != TCP_ST_CLOSE_WAIT) {
-	// 		TRACE_API("Stream %d at state %s\n", 
-	// 				cur_stream->id, TCPStateToString(cur_stream));
-	// 		errno = EBADF;
-	// 		return -1;
-	// 	}
-		
-	// 	SQ_LOCK(&mtcp->ctx->destroyq_lock);
-	// 	// cur_stream->sndvar->on_closeq = TRUE;
-	// 	ret = StreamEnqueue(mtcp->destroyq, cur_stream);
-	// 	mtcp->wakeup_flag = TRUE;
-	// 	SQ_UNLOCK(&mtcp->ctx->destroyq_lock);
-
-	// 	if (ret < 0) {
-	// 		TRACE_ERROR("(NEVER HAPPEN) Failed to enqueue the stream to close.\n");
-	// 		errno = EAGAIN;
-	// 		return -1;
-	// 	}
-
-	// 	printf("MPCB Stream  closed\n");
-		/***END*/
 
 		return 0;
 	}
@@ -1349,6 +1289,7 @@ mtcp_recv(mctx_t mctx, int sockid, char *buf, size_t len, int flags)
 		errno = ENOTCONN;
 		return -1;
 	}
+
 	rcvvar = cur_stream->rcvvar;
 	
 	/* if CLOSE_WAIT, return 0 if there is no payload */
@@ -1359,6 +1300,7 @@ mtcp_recv(mctx_t mctx, int sockid, char *buf, size_t len, int flags)
 		if (rcvvar->rcvbuf->merged_len == 0)
 			return 0;
         }
+	
 	/* return EAGAIN if no receive buffer */
 	if (socket->opts & MTCP_NONBLOCK) {
 		if (!rcvvar->rcvbuf || rcvvar->rcvbuf->merged_len == 0) {
@@ -1366,7 +1308,7 @@ mtcp_recv(mctx_t mctx, int sockid, char *buf, size_t len, int flags)
 			return -1;
 		}
 	}
-
+	
 	SBUF_LOCK(&rcvvar->read_lock);
 #if BLOCKING_SUPPORT
 	if (!(socket->opts & MTCP_NONBLOCK)) {
@@ -1645,7 +1587,7 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 		errno = ENOTSOCK;
 		return -1;
 	}
-
+	
 	cur_stream = socket->stream;
 	
 	/***********************SCHEDULER*******************************/
@@ -1765,7 +1707,6 @@ mtcp_write(mctx_t mctx, int sockid, const char *buf, size_t len)
 	}
 
 	TRACE_API("Stream %d: mtcp_write() returning %d\n", cur_stream->id, ret);
-
 	return ret;
 }
 /*----------------------------------------------------------------------------*/

@@ -114,8 +114,7 @@ GetDestinationHWaddr(uint32_t dip, uint32_t sip, uint8_t is_gateway)
 	}
 	
 
-	// if (is_gateway == 1 && CONFIG.arp.gateway)
-	// 	d_haddr = (CONFIG.arp.gateway)->haddr;
+
 	else {	
 		/* Longest prefix matching */
 		for (i = 0; i < CONFIG.arp.entries; i++) {
@@ -201,13 +200,6 @@ RegisterARPEntry(uint32_t ip, const unsigned char *haddr)
 			break;
 		}
 	}
-
-	// if (CONFIG.gateway && ((CONFIG.gateway)->daddr &
-	// 		       CONFIG.arp.entry[idx].ip_mask) ==
-	//     CONFIG.arp.entry[idx].ip_masked) {
-	// 	CONFIG.arp.gateway = &CONFIG.arp.entry[idx];
-	// 	TRACE_CONFIG("ARP Gateway SET!\n");
-	// }
 	
 	CONFIG.arp.entries = idx + 1;
 
